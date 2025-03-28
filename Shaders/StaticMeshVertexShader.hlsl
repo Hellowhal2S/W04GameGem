@@ -35,23 +35,23 @@ PS_INPUT mainVS(VS_INPUT input)
     
     // 위치 변환
     output.position = mul(input.position, MVP);
-    output.color = input.color;
-    if (isSelected)
-        output.color *= 0.5;
-    // 입력 normal 값의 길이 확인
-    float normalThreshold = 0.001;
-    float normalLen = length(input.normal);
-    
-    if (normalLen < normalThreshold)
-    {
-        output.normalFlag = 0.0;
-    }
-    else
-    {
-        //output.normal = normalize(input.normal);
-        output.normal = mul(input.normal, MInverseTranspose);
-        output.normalFlag = 1.0;
-    }
+    // output.color = input.color;
+    // if (isSelected)
+    //     output.color *= 0.5;
+    // // 입력 normal 값의 길이 확인
+    // float normalThreshold = 0.001;
+    // float normalLen = length(input.normal);
+    //
+    // if (normalLen < normalThreshold)
+    // {
+    //     output.normalFlag = 0.0;
+    // }
+    // else
+    // {
+    //     //output.normal = normalize(input.normal);
+    //     output.normal = mul(input.normal, MInverseTranspose);
+    //     output.normalFlag = 1.0;
+    // }
     output.texcoord = input.texcoord;
     
     return output;

@@ -5,7 +5,8 @@ extern FEngineLoop GEngineLoop;
 
 UPrimitiveBatch::UPrimitiveBatch()
 {
-    GenerateGrid(5, 5000);
+    // GenerateGrid(5, 50000);
+    GenerateGrid(5, 50);
 }
 
 UPrimitiveBatch::~UPrimitiveBatch()
@@ -187,9 +188,7 @@ void UPrimitiveBatch::RenderOBB(const FBoundingBox& localAABB, const FVector& ce
         // 모델 매트릭스로 점을 변환 후, center를 더해준다.
         faceBB.corners[i] =  center + FMatrix::TransformVector(localVertices[i], modelMatrix);
     }
-
     OrientedBoundingBoxes.Add(faceBB);
-
 }
 
 void UPrimitiveBatch::AddCone(const FVector& center, float radius, float height, int segments, const FVector4& color, const FMatrix& modelMatrix)

@@ -107,7 +107,11 @@ PS_OUTPUT mainPS(PS_INPUT input)
     
     output.UUID = UUID;
     
-    float3 texColor = Textures.Sample(Sampler, input.texcoord + UVOffset);
+    float4 texColor = Textures.Sample(Sampler, input.texcoord + UVOffset);
+    //건너뛰기 코드 
+    texColor = float4(texColor + Material.DiffuseColor, 1.0f);
+
+    /* 이전 코드 
     float3 color;
     if (texColor.g == 0) // TODO: boolean으로 변경
         color = saturate(Material.DiffuseColor);
@@ -166,5 +170,7 @@ PS_OUTPUT mainPS(PS_INPUT input)
         output.color.a = Material.TransparencyScalar;
             
         return output;
-    }
+    }*/
+    output.color = texColor;
+    return output;
 }
