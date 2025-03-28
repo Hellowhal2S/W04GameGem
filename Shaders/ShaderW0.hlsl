@@ -55,23 +55,23 @@ PS_INPUT mainVS(VS_INPUT input)
     
     // 위치 변환
     output.position = mul(input.position, MVP);
-    output.color = input.color;
-    if (isSelected)
-        output.color *= 0.5;
-    // 입력 normal 값의 길이 확인
-    float normalThreshold = 0.001;
-    float normalLen = length(input.normal);
-    
-    if (normalLen < normalThreshold)
-    {
-        output.normalFlag = 0.0;
-    }
-    else
-    {
-        //output.normal = normalize(input.normal);
-        output.normal = mul(input.normal, MInverseTranspose);
-        output.normalFlag = 1.0;
-    }
+    // output.color = input.color;
+    // if (isSelected)
+    //     output.color *= 0.5;
+    // // 입력 normal 값의 길이 확인
+    // float normalThreshold = 0.001;
+    // float normalLen = length(input.normal);
+    //
+    // if (normalLen < normalThreshold)
+    // {
+    //     output.normalFlag = 0.0;
+    // }
+    // else
+    // {
+    //     //output.normal = normalize(input.normal);
+    //     output.normal = mul(input.normal, MInverseTranspose);
+    //     output.normalFlag = 1.0;
+    // }
     output.texcoord = input.texcoord;
     return output;
 }
@@ -111,11 +111,10 @@ PS_OUTPUT mainPS(PS_INPUT input) : SV_Target
     PS_OUTPUT output;
     
     output.UUID = UUID;
-    
-    // 기존의 색상과 텍스처 색상을 조합
-    //input.texcoord
+
     float4 texColor = Texture.Sample(Sampler, input.texcoord);
-    //texColor = float4(1, 1, 1, 1);
+    /* 기존 라이팅 코드
+    // 기존의 색상과 텍스처 색상을 조합
     float3 color;
     if (input.texcoord.g == 0) // 텍스처가 없으면 기본 색상 유지
     {
@@ -124,7 +123,6 @@ PS_OUTPUT mainPS(PS_INPUT input) : SV_Target
     else
         color = saturate(input.color.rgb * texColor.rgb);
 
-    //float3 color = saturate(input.color.rgb);
 
     if (IsLit == 1) // 조명이 적용되는 경우
     {
@@ -148,8 +146,8 @@ PS_OUTPUT mainPS(PS_INPUT input) : SV_Target
         output.color = PaperTexture(color);
         return output;
     }
-    
-    output.color = float4(color, 1.0);
+    */
+    output.color = texColor;
     
     return output;
 }

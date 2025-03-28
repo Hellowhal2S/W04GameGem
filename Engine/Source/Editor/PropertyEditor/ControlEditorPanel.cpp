@@ -14,6 +14,7 @@
 #include "tinyfiledialogs/tinyfiledialogs.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "PropertyEditor/ShowFlags.h"
+#include "UnrealEd/SceneMgr.h"
 
 void ControlEditorPanel::Render()
 {
@@ -82,6 +83,8 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
     
     if (bOpenMenu)
     {
+        std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
+
         ImGui::SetNextWindowPos(ImVec2(10, 55), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(135, 170), ImGuiCond_Always);
         
@@ -105,6 +108,14 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
             }
 
             // TODO: Load Scene
+            FString NewFile = SceneMgr->LoadSceneFromFile(FileName);
+            SceneMgr->ParseSceneData(NewFile);
+
+            //while (!NewData.Cameras.IsEmpty())
+            //{
+            //    const std::unique_ptr<Camear
+            //}
+
         }
 
         ImGui::Separator();
@@ -274,8 +285,8 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     AStaticMeshActor* TempActor = World->SpawnActor<AStaticMeshActor>();
                     TempActor->SetActorLabel(TEXT("OBJ_CUBE"));
                     UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
-                    FManagerOBJ::CreateStaticMesh("Assets/helloBlender.obj");
-                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"helloBlender.obj"));
+                    FManagerOBJ::CreateStaticMesh("Assets/Cube.obj");
+                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Cube.obj"));
                     break;
                 }
                 case OBJ_SpotLight:

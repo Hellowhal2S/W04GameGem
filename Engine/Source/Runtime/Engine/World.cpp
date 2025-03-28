@@ -22,14 +22,12 @@ void UWorld::Initialize()
     // TODO: Load Scene
     CreateBaseObject();
     //SpawnObject(OBJ_CUBE);
-    FManagerOBJ::CreateStaticMesh("Assets/Dodge/Dodge.obj");
-    /*
-    FManagerOBJ::CreateStaticMesh("Assets/SkySphere.obj");
-    AActor* SpawnedActor = SpawnActor<AActor>();
-    USkySphereComponent* skySphere = SpawnedActor->AddComponent<USkySphereComponent>();
-    skySphere->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"SkySphere.obj"));
-    skySphere->GetStaticMesh()->GetMaterials()[0]->Material->SetDiffuse(FVector((float)32 / 255, (float)171 / 255, (float)191 / 255));
-*/
+
+    // FManagerOBJ::CreateStaticMesh("Assets/SkySphere.obj");
+    // AActor* SpawnedActor = SpawnActor<AActor>();
+    // USkySphereComponent* skySphere = SpawnedActor->AddComponent<USkySphereComponent>();
+    // skySphere->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"SkySphere.obj"));
+    // skySphere->GetStaticMesh()->GetMaterials()[0]->Material->SetDiffuse(FVector((float)32/255, (float)171/255, (float)191/255));
     BuildOctree();
 }
 
@@ -40,31 +38,10 @@ void UWorld::CreateBaseObject()
         EditorPlayer = FObjectFactory::ConstructObject<AEditorPlayer>();;
     }
 
-    if (camera == nullptr)
-    {
-        camera = FObjectFactory::ConstructObject<UCameraComponent>();
-        camera->SetLocation(FVector(8.0f, 8.0f, 8.f));
-        camera->SetRotation(FVector(0.0f, 45.0f, -135.0f));
-    }
-
-    if (LocalGizmo == nullptr)
-    {
-        LocalGizmo = FObjectFactory::ConstructObject<UTransformGizmo>();
-    }
-    FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
-    for (int i = 0; i < 100; i++)
-    {
-        for (int j = 0; j < 100; j++)
-        {
-            AActor* SpawnedActor = SpawnActor<AActor>();
-            UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
-            apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
-            FVector newPos = FVector(i, j, 0);
-            SpawnedActor->SetActorLocation(newPos);
-            apple->UpdateWorldAABB();
-            
-        }
-    }
+    // if (LocalGizmo == nullptr)
+    // {
+    //     LocalGizmo = FObjectFactory::ConstructObject<UTransformGizmo>();
+    // }
 }
 
 void UWorld::ReleaseBaseObject()
@@ -81,12 +58,6 @@ void UWorld::ReleaseBaseObject()
         worldGizmo = nullptr;
     }
 
-    if (camera)
-    {
-        delete camera;
-        camera = nullptr;
-    }
-
     if (EditorPlayer)
     {
         delete EditorPlayer;
@@ -96,9 +67,10 @@ void UWorld::ReleaseBaseObject()
 
 void UWorld::Tick(float DeltaTime)
 {
-    camera->TickComponent(DeltaTime);
-    EditorPlayer->Tick(DeltaTime);
-    LocalGizmo->Tick(DeltaTime);
+	// camera->TickComponent(DeltaTime);
+	EditorPlayer->Tick(DeltaTime);
+	// LocalGizmo->Tick(DeltaTime);
+
     // SpawnActor()에 의해 Actor가 생성된 경우, 여기서 BeginPlay 호출
     for (AActor* Actor : PendingBeginPlayActors)
     {
