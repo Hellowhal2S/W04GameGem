@@ -10,16 +10,21 @@ class UPrimitiveBatch;
 class FFrustum;
 class UPrimitiveComponent;
 
+// 템플릿 배열 정의
 struct FRenderBatchData
 {
-    FObjMaterialInfo MaterialInfo;
-    TArray<FVertexSimple> Vertices;
-    TArray<UINT> Indices;
-    int IndicesNum;
-    
     ID3D11Buffer* VertexBuffer = nullptr;
     ID3D11Buffer* IndexBuffer = nullptr;
+    TArray<FVertexSimple> Vertices;
+    TArray<UINT> Indices;
+    FObjMaterialInfo MaterialInfo;
+    uint32 IndicesNum = 0;
+    int32 LastUsedFrame = -1;
+
+    void CreateBuffersIfNeeded(FRenderer& Renderer);
+    void ReleaseBuffersIfUnused(int CurrentFrame, int ThresholdFrames);
 };
+
 
 class FOctreeNode
 {
@@ -39,12 +44,13 @@ public:
     void BuildBatchBuffers(FRenderer& Renderer);
     void Insert(UPrimitiveComponent* Component, int MaxDepth = 5);
     void Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
+    void TickBuffers(int CurrentFrame, int FrameThreshold);
 
     void RenderBatches(
         FRenderer& Renderer,
         const FFrustum& Frustum,
         const FMatrix& VP
-    ) const;
+    );
 };
 
 class FOctree

@@ -72,7 +72,52 @@ void FRenderer::CreateShader()
     VertexShaderCSO->Release();
     PixelShaderCSO->Release();
 }
+/*
+void FRenderer::CreateShader()
+{
+    ID3DBlob* VertexShaderCSO;
+    ID3DBlob* PixelShaderCSO;
 
+    D3DCompileFromFile(L"Shaders/StaticMeshVertexShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &VertexShaderCSO, nullptr);
+    Graphics->Device->CreateVertexShader(VertexShaderCSO->GetBufferPointer(), VertexShaderCSO->GetBufferSize(), nullptr, &VertexShader);
+
+    D3DCompileFromFile(L"Shaders/StaticMeshPixelShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &PixelShaderCSO, nullptr);
+    Graphics->Device->CreatePixelShader(PixelShaderCSO->GetBufferPointer(), PixelShaderCSO->GetBufferSize(), nullptr, &PixelShader);
+
+    D3D11_INPUT_ELEMENT_DESC layout[] = {
+        // POSITION (float3)
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+
+        // NORMAL (int16x3 → packed as R16G16B16_SNORM → fallback to R16G16_SNORM + 1 byte if needed)
+        {"NORMAL", 0, DXGI_FORMAT_R16G16B16A16_SNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+
+        // TEXCOORD (uint16x2)
+        {"TEXCOORD", 0, DXGI_FORMAT_R16G16_UNORM, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
+
+        // MATERIAL INDEX (uint8)
+        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R8_UINT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    D3D11_INPUT_ELEMENT_DESC layout[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+    Graphics->Device->CreateInputLayout(
+        layout,
+        ARRAYSIZE(layout),
+        VertexShaderCSO->GetBufferPointer(),
+        VertexShaderCSO->GetBufferSize(),
+        &InputLayout
+    );
+
+    Stride = sizeof(FVertexSimple); // 24 bytes
+    VertexShaderCSO->Release();
+    PixelShaderCSO->Release();
+}
+*/
 void FRenderer::ReleaseShader()
 {
     if (InputLayout)
@@ -260,7 +305,43 @@ ID3D11Buffer* FRenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
     }
     return vertexBuffer;
 }
+ID3D11Buffer* FRenderer::CreateVertexBuffer(FVertexCompact* vertices, UINT byteWidth) const
+{
+    // 2. Create a vertex buffer
+    D3D11_BUFFER_DESC vertexbufferdesc = {};
+    vertexbufferdesc.ByteWidth = byteWidth;
+    vertexbufferdesc.Usage = D3D11_USAGE_IMMUTABLE; // will never be updated 
+    vertexbufferdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
+    D3D11_SUBRESOURCE_DATA vertexbufferSRD = {vertices};
+
+    ID3D11Buffer* vertexBuffer;
+
+    HRESULT hr = Graphics->Device->CreateBuffer(&vertexbufferdesc, &vertexbufferSRD, &vertexBuffer);
+    if (FAILED(hr))
+    {
+        UE_LOG(LogLevel::Warning, "VertexBuffer Creation faild");
+    }
+    return vertexBuffer;
+}
+ID3D11Buffer* FRenderer::CreateVertexBuffer(const TArray<FVertexCompact>& vertices, UINT byteWidth)
+{
+    D3D11_BUFFER_DESC desc = {};
+    desc.ByteWidth = byteWidth;
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = vertices.GetData();
+
+    ID3D11Buffer* vertexBuffer = nullptr;
+    HRESULT hr = Graphics->Device->CreateBuffer(&desc, &initData, &vertexBuffer);
+    if (FAILED(hr))
+    {
+        UE_LOG(LogLevel::Warning, "FVertexCompact VertexBuffer Creation failed");
+    }
+    return vertexBuffer;
+}
 ID3D11Buffer* FRenderer::CreateVertexBuffer(const TArray<FVertexSimple>& vertices, UINT byteWidth) const
 {
     D3D11_BUFFER_DESC vertexbufferdesc = {};
@@ -1041,7 +1122,11 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     FMatrix View = ActiveViewport->GetViewMatrix();
     FMatrix Proj = ActiveViewport->GetProjectionMatrix();
     Frustum.ConstructFrustum(View*Proj);
-    FStatRegistry::RegisterResult(FrustumTimer); 
+    FStatRegistry::RegisterResult(FrustumTimer);
+
+    const int FrameThreshold = 120; // 120프레임 이상 사용 안 한 버퍼 제거
+    World->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, FrameThreshold);
+
     FScopeCycleCounter BatchTimer("BatchTimer");
     World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
     FStatRegistry::RegisterResult(BatchTimer); 

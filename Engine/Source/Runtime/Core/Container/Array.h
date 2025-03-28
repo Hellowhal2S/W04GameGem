@@ -116,6 +116,7 @@ public:
         return true;
     }
     void Append(const TArray& OtherArray);
+    void ShrinkToFit();
 };
 
 
@@ -357,4 +358,9 @@ template <typename T, typename Allocator>
 void TArray<T, Allocator>::Append(const TArray& OtherArray)
 {
     ContainerPrivate.insert(ContainerPrivate.end(), OtherArray.begin(), OtherArray.end());
+}
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::ShrinkToFit()
+{
+    ContainerPrivate.shrink_to_fit();
 }

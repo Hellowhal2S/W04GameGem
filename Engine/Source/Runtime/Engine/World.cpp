@@ -199,7 +199,7 @@ void UWorld::BuildOctree()
     SceneOctree = new FOctree(WorldBounds);
     SceneOctree->Build(); // 모든 컴포넌트 삽입
     SceneOctree->GetRoot()->BuildBatchRenderData();   // 2단계: 머티리얼 기준 정점 수집
-    SceneOctree->GetRoot()->BuildBatchBuffers(FEngineLoop::renderer);
+    //SceneOctree->GetRoot()->BuildBatchBuffers(FEngineLoop::renderer);
     FStatRegistry::RegisterResult(Timer); 
 }
 void UWorld::ClearScene()

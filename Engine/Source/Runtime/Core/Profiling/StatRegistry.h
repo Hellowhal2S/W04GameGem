@@ -3,6 +3,11 @@
 #include "Core/Container/Array.h"
 #include "Core/Container/Map.h"
 
+extern int GCurrentFrame; // 글로벌 프레임 카운터 선언
+
+// 프레임 업데이트 매크로 (렌더링 루프에서 매 프레임 증가 필요)
+#define ADVANCE_FRAME() (++GCurrentFrame)
+
 class FScopeCycleCounter;
 struct TStatId;
 struct FStatFPSRecord

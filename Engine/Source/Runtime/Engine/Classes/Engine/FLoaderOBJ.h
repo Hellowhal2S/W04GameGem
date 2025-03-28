@@ -336,7 +336,7 @@ struct FLoaderOBJ
                 vertex.y = RawData.Vertices[vIdx].y;
                 vertex.z = RawData.Vertices[vIdx].z;
 
-                vertex.r = 1.0f; vertex.g = 1.0f; vertex.b = 1.0f; vertex.a = 1.0f; // 기본 색상
+                //vertex.r = 1.0f; vertex.g = 1.0f; vertex.b = 1.0f; vertex.a = 1.0f; // 기본 색상
 
                 if (tIdx != UINT32_MAX && tIdx < RawData.UVs.Num())
                 {
@@ -397,7 +397,7 @@ struct FLoaderOBJ
 
         return true;
     }
-
+    
     static void ComputeBoundingBox(const TArray<FVertexSimple>& InVertices, FVector& OutMinVector, FVector& OutMaxVector)
     {
         FVector MinVector = { FLT_MAX, FLT_MAX, FLT_MAX };

@@ -185,7 +185,7 @@ void FEngineLoop::Tick()
     {
 		FScopeCycleCounter Timer("MainFrame");
         QueryPerformanceCounter(&startTime);
-
+        ADVANCE_FRAME();
         MSG msg;
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
@@ -210,7 +210,7 @@ void FEngineLoop::Tick()
         UIMgr->BeginFrame();
         UnrealEditor->Render();
 
-        Console::GetInstance().Draw();
+        //Console::GetInstance().Draw();
 
         UIMgr->EndFrame();
         FStatRegistry::RegisterResult(Timer2);
