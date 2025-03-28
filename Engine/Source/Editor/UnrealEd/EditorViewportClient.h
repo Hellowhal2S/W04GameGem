@@ -121,7 +121,7 @@ public:
     // 카메라 정보 
     float ViewFOV = 60.0f;
     /** Viewport's stored horizontal field of view (saved in ini files). */
-    float FOVAngle = 60.0f;
+    // float FOVAngle = 60.0f;
     float AspectRatio;
     float nearPlane = 0.1f;
     float farPlane = 1000000.0f;
@@ -146,6 +146,13 @@ public: //Camera Movement
     FMatrix& GetProjectionMatrix() { return Projection; }
     void UpdateViewMatrix();
     void UpdateProjectionMatrix();
+
+    void SetViewFOV(float viewFOV) {ViewFOV = viewFOV;}
+    float GetViewFOV() {return ViewFOV;}
+    void SetNearClip(float newNearClip) { nearPlane = newNearClip; }
+    float GetNearClip() {return nearPlane;}
+    void SetFarClip(float newFarClip) {farPlane = newFarClip;}
+    float GetFarClip() {return farPlane;}
 
     bool IsOrtho() const;
     bool IsPerspective() const;
