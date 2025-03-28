@@ -101,10 +101,10 @@ void FRenderer::PrepareShader() const
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
         Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &ConstantBuffer);
         Graphics->DeviceContext->PSSetConstantBuffers(1, 1, &MaterialConstantBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &LightingBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &FlagBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(4, 1, &SubMeshConstantBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(5, 1, &TextureConstantBufer);
+        // Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &LightingBuffer);
+        // Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &FlagBuffer);
+        // Graphics->DeviceContext->PSSetConstantBuffers(4, 1, &SubMeshConstantBuffer);
+        // Graphics->DeviceContext->PSSetConstantBuffers(5, 1, &TextureConstantBufer);
     }
 }
 
