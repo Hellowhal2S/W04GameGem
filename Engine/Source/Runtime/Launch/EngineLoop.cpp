@@ -134,34 +134,36 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
 void FEngineLoop::Render()
 {
     graphicDevice.Prepare();
-    if (LevelEditor->IsMultiViewport())
-    {
-        std::shared_ptr<FEditorViewportClient> viewportClient = GetLevelEditor()->GetActiveViewportClient();
-        for (int i = 0; i < 4; ++i)
-        {
-            LevelEditor->SetViewportClient(i);
-            // graphicDevice.DeviceContext->RSSetViewports(1, &LevelEditor->GetViewports()[i]->GetD3DViewport());
-            // graphicDevice.ChangeRasterizer(LevelEditor->GetActiveViewportClient()->GetViewMode());
-            // renderer.ChangeViewMode(LevelEditor->GetActiveViewportClient()->GetViewMode());
-            // renderer.PrepareShader();
-            // renderer.UpdateLightBuffer();
-            // RenderWorld();
-            renderer.PrepareRender();
-            renderer.Render(GetWorld(),LevelEditor->GetActiveViewportClient());
-        }
-        GetLevelEditor()->SetViewportClient(viewportClient);
-    }
-    else
-    {
+    renderer.PrepareRender();
+    renderer.Render(GetWorld(),LevelEditor->GetActiveViewportClient());
+    // if (LevelEditor->IsMultiViewport())
+    // {
+    //     std::shared_ptr<FEditorViewportClient> viewportClient = GetLevelEditor()->GetActiveViewportClient();
+    //     for (int i = 0; i < 4; ++i)
+    //     {
+    //         LevelEditor->SetViewportClient(i);
+    //         // graphicDevice.DeviceContext->RSSetViewports(1, &LevelEditor->GetViewports()[i]->GetD3DViewport());
+    //         // graphicDevice.ChangeRasterizer(LevelEditor->GetActiveViewportClient()->GetViewMode());
+    //         // renderer.ChangeViewMode(LevelEditor->GetActiveViewportClient()->GetViewMode());
+    //         // renderer.PrepareShader();
+    //         // renderer.UpdateLightBuffer();
+    //         // RenderWorld();
+    //         renderer.PrepareRender();
+    //         renderer.Render(GetWorld(),LevelEditor->GetActiveViewportClient());
+    //     }
+    //     GetLevelEditor()->SetViewportClient(viewportClient);
+    // }
+    // else
+    // {
         // graphicDevice.DeviceContext->RSSetViewports(1, &LevelEditor->GetActiveViewportClient()->GetD3DViewport());
         // graphicDevice.ChangeRasterizer(LevelEditor->GetActiveViewportClient()->GetViewMode());
         // renderer.ChangeViewMode(LevelEditor->GetActiveViewportClient()->GetViewMode());
         // renderer.PrepareShader();
         // renderer.UpdateLightBuffer();
-        // RenderWorld();
-        renderer.PrepareRender();
-        renderer.Render(GetWorld(),LevelEditor->GetActiveViewportClient());
-    }
+        // // RenderWorld();
+        // renderer.PrepareRender();
+        // renderer.Render(GetWorld(),LevelEditor->GetActiveViewportClient());
+    // }
 }
 
 void FEngineLoop::Tick()
@@ -173,7 +175,7 @@ void FEngineLoop::Tick()
 
     LARGE_INTEGER startTime, endTime;
     double elapsedTime = 1.0;
-
+    LevelEditor->OffMultiViewport();
     while (bIsExit == false)
     {
         QueryPerformanceCounter(&startTime);
@@ -191,14 +193,14 @@ void FEngineLoop::Tick()
             }
         }
 
-        Input();
+        // Input();
         GWorld->Tick(elapsedTime);
         LevelEditor->Tick(elapsedTime);
         Render();
         UIMgr->BeginFrame();
         UnrealEditor->Render();
 
-        Console::GetInstance().Draw();
+        // Console::GetInstance().Draw();
 
         UIMgr->EndFrame();
 
