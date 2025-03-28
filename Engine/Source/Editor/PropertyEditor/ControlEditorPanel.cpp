@@ -110,7 +110,8 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
             // TODO: Load Scene
             FString NewFile = SceneMgr->LoadSceneFromFile(FileName);
             SceneMgr->ParseSceneData(NewFile);
-
+            GEngineLoop.renderer.PrepareStaticBatch();
+            GEngineLoop.renderer.BatchRenderOn = true;;
             //while (!NewData.Cameras.IsEmpty())
             //{
             //    const std::unique_ptr<Camear

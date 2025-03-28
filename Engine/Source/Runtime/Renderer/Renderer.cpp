@@ -20,6 +20,7 @@
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
 #include "Components/SkySphereComponent.h"
+#include "Engine/FLoaderOBJ.h"
 
 void FRenderer::Initialize(FGraphicsDevice* graphics)
 {
@@ -197,12 +198,12 @@ void FRenderer::RenderPrimitive(OBJ::FStaticMeshRenderData* renderData, TArray<F
     for (int subMeshIndex = 0; subMeshIndex < renderData->MaterialSubsets.Num(); subMeshIndex++)
     {
         int materialIndex = renderData->MaterialSubsets[subMeshIndex].MaterialIndex;
-
+    
         subMeshIndex == selectedSubMeshIndex ? UpdateSubMeshConstant(true) : UpdateSubMeshConstant(false);
-
+    
         overrideMaterial[materialIndex] != nullptr ? 
             UpdateMaterial(overrideMaterial[materialIndex]->GetMaterialInfo()) : UpdateMaterial(materials[materialIndex]->Material->GetMaterialInfo());
-
+    
         if (renderData->IndexBuffer)
         {
             // index draw
@@ -978,18 +979,18 @@ void FRenderer::PrepareRender()
             if (!Cast<UGizmoBaseComponent>(iter))
                 StaticMeshObjs.Add(pStaticMeshComp);
         }
-        if (UGizmoBaseComponent* pGizmoComp = Cast<UGizmoBaseComponent>(iter))
-        {
-            GizmoObjs.Add(pGizmoComp);
-        }
-        if (UBillboardComponent* pBillboardComp = Cast<UBillboardComponent>(iter))
-        {
-            BillboardObjs.Add(pBillboardComp);
-        }
-        if (ULightComponentBase* pLightComp = Cast<ULightComponentBase>(iter))
-        {
-            LightObjs.Add(pLightComp);
-        }
+        // if (UGizmoBaseComponent* pGizmoComp = Cast<UGizmoBaseComponent>(iter))
+        // {
+        //     GizmoObjs.Add(pGizmoComp);
+        // }
+        // if (UBillboardComponent* pBillboardComp = Cast<UBillboardComponent>(iter))
+        // {
+        //     BillboardObjs.Add(pBillboardComp);
+        // }
+        // if (ULightComponentBase* pLightComp = Cast<ULightComponentBase>(iter))
+        // {
+        //     LightObjs.Add(pLightComp);
+        // }
     }
 }
 
@@ -1001,22 +1002,7 @@ void FRenderer::ClearRenderArr()
     LightObjs.Empty();
 }
 
-void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
-{
-    Graphics->DeviceContext->RSSetViewports(1, &ActiveViewport->GetD3DViewport());
-    Graphics->ChangeRasterizer(ActiveViewport->GetViewMode());
-    ChangeViewMode(ActiveViewport->GetViewMode());
-    // UpdateLightBuffer();
-    UPrimitiveBatch::GetInstance().RenderBatch(ActiveViewport->GetViewMatrix(), ActiveViewport->GetProjectionMatrix());
 
-    // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
-        RenderStaticMeshes(World, ActiveViewport);
-    // RenderGizmos(World, ActiveViewport);
-    // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText))
-        // RenderBillboards(World, ActiveViewport);
-    // RenderLight(World, ActiveViewport);
-    ClearRenderArr();
-}
 
 void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
@@ -1184,4 +1170,91 @@ void FRenderer::RenderLight(UWorld* World, std::shared_ptr<FEditorViewportClient
         UPrimitiveBatch::GetInstance().AddCone(Light->GetWorldLocation(), Light->GetRadius(), 15, 140, Light->GetColor(), Model);
         UPrimitiveBatch::GetInstance().RenderOBB(Light->GetBoundingBox(), Light->GetWorldLocation(), Model);
     }
+}
+void FRenderer::PrepareStaticBatch()
+{
+    TMap<FWString, TArray<FVertexSimple>> VerticeMap;
+    TMap<FWString, TArray<uint32>> IndiceMap;
+    TMap<FWString, uint32> BaseIndexMap;
+    TMap<FWString, FObjMaterialInfo> MaterialMap; 
+    TArray<FVertexSimple> mergedVertices;
+    TArray<uint32> mergedIndices;
+    uint32 baseVertex = 0;
+
+    // for (const auto mesh : TObjectRange<UStaticMeshComponent>())
+    // {
+    //     objMaterial = mesh->GetStaticMesh()->GetMaterials()[0]->Material->GetMaterialInfo();
+    //
+    //     break;
+    // }
+    for (const auto mesh : TObjectRange<UStaticMeshComponent>()) {
+        // 각 메시의 Vertex 데이터를 합치기
+        
+        FMatrix worldMatrix = JungleMath::CreateModelMatrix( mesh->GetWorldLocation(),mesh->GetWorldRotation(), mesh->GetWorldScale());
+        
+        for (FVertexSimple vertex : mesh->GetStaticMesh()->GetRenderData()->Vertices)
+        {
+            FVector Pos = FVector(vertex.x, vertex.y, vertex.z);
+            Pos = worldMatrix.TransformPosition(Pos);
+            vertex.x = Pos.x;
+            vertex.y = Pos.y;
+            vertex.z = Pos.z;
+            VerticeMap[mesh->GetStaticMesh()->GetRenderData()->ObjectName].Add(vertex);
+        }
+        
+        // Index 데이터 업데이트 (오프셋 적용)
+        for (uint32 index : mesh->GetStaticMesh()->GetRenderData()->Indices) {
+            IndiceMap[mesh->GetStaticMesh()->GetRenderData()->ObjectName].Add(index+ BaseIndexMap[mesh->GetStaticMesh()->GetRenderData()->ObjectName]);
+        }
+
+        BaseIndexMap[mesh->GetStaticMesh()->GetRenderData()->ObjectName] += mesh->GetStaticMesh()->GetRenderData()->Vertices.Num();
+    }
+    
+    for (auto iter : IndiceMap)
+    {
+        IndexCountMap[iter.Key] = iter.Value.Num();
+        IndexBuffersMap[iter.Key] = CreateIndexBuffer(iter.Value, iter.Value.Num() * sizeof(uint32));
+    }
+    // DirectX에서 Static Batch용 Vertex Buffer 생성
+    for (auto iter : VerticeMap)
+    {
+        VertexBuffersMap[iter.Key] = CreateVertexBuffer(iter.Value, iter.Value.Num()* sizeof(FVertexSimple));
+    }
+    // staticBatchVertexBuffer = CreateVertexBuffer(mergedVertices, mergedVertices.Num() * sizeof(FVertexSimple));
+    // staticBatchIndexBuffer = CreateIndexBuffer(mergedIndices, mergedIndices.Num() * sizeof(uint32));
+}
+void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
+{
+    Graphics->DeviceContext->RSSetViewports(1, &ActiveViewport->GetD3DViewport());
+    Graphics->ChangeRasterizer(ActiveViewport->GetViewMode());
+    ChangeViewMode(ActiveViewport->GetViewMode());
+    // UpdateLightBuffer();
+    UPrimitiveBatch::GetInstance().RenderBatch(ActiveViewport->GetViewMatrix(), ActiveViewport->GetProjectionMatrix());
+
+    if (BatchRenderOn)
+        RenderStaticBatch(World, ActiveViewport);
+    else 
+        // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
+        RenderStaticMeshes(World, ActiveViewport);
+    // RenderGizmos(World, ActiveViewport);
+    // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText))
+    // RenderBillboards(World, ActiveViewport);
+    // RenderLight(World, ActiveViewport);
+    ClearRenderArr();
+}
+void FRenderer::RenderStaticBatch(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
+{
+    PrepareShader();
+    UINT offset = 0;
+    FMatrix MVP =  ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
+    UpdateConstant(MVP, FMatrix::Identity, FVector4(), false);
+    for (auto iter : VertexBuffersMap)
+    {
+        UpdateMaterial(FManagerOBJ::GetStaticMesh(iter.Key)->GetMaterials()[0]->Material->GetMaterialInfo());
+        Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VertexBuffersMap[iter.Key], &Stride, &offset);
+        Graphics->DeviceContext->IASetIndexBuffer(IndexBuffersMap[iter.Key], DXGI_FORMAT_R32_UINT, 0);
+        Graphics->DeviceContext->DrawIndexed(IndexCountMap[iter.Key], 0, 0);
+    }
+    // skySphere->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"SkySphere.obj"));
+    // UpdateMaterial(objMaterial);
 }

@@ -8,7 +8,7 @@
 #include "EngineBaseTypes.h"
 #include "Define.h"
 #include "Container/Set.h"
-
+#include "Container/Map.h"
 class ULightComponentBase;
 class UWorld;
 class FGraphicsDevice;
@@ -35,7 +35,7 @@ public:
     ID3D11Buffer* MaterialConstantBuffer = nullptr;
     ID3D11Buffer* SubMeshConstantBuffer = nullptr;
     ID3D11Buffer* TextureConstantBufer = nullptr;
-
+    
     FLighting lightingData;
 
     uint32 Stride;
@@ -143,6 +143,8 @@ public: // line shader
     void RenderGizmos(const UWorld* World, const std::shared_ptr<FEditorViewportClient>& ActiveViewport);
     void RenderLight(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport);
     void RenderBillboards(UWorld* World,std::shared_ptr<FEditorViewportClient> ActiveViewport);
+    void PrepareStaticBatch();
+    void RenderStaticBatch(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport);
 private:
     TArray<UStaticMeshComponent*> StaticMeshObjs;
     TArray<UGizmoBaseComponent*> GizmoObjs;
@@ -157,5 +159,17 @@ public:
     ID3D11ShaderResourceView* pBBSRV = nullptr;
     ID3D11ShaderResourceView* pConeSRV = nullptr;
     ID3D11ShaderResourceView* pOBBSRV = nullptr;
+
+    TMap<FWString, ID3D11Buffer*> VertexBuffersMap;
+    TMap<FWString, ID3D11Buffer*> IndexBuffersMap;
+    TMap<FWString, uint32> IndexCountMap;
+    // TMap<FString, FObjMaterialInfo> MaterialMap;
+
+    ID3D11Buffer* staticBatchVertexBuffer = nullptr;
+    ID3D11Buffer* staticBatchIndexBuffer = nullptr;
+    uint32 staticBatchIndexCount = 0;
+    bool BatchRenderOn = false;
+    FObjMaterialInfo objMaterial;
+    // TMap<FString, FVe> StaticMeshes;
 };
 
