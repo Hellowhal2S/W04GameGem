@@ -86,6 +86,7 @@ public:
     bool SetActorRotation(const FVector& NewRotation);
     bool SetActorScale(const FVector& NewScale);
 
+    FMatrix GetModelMatrix() const;
 protected:
     USceneComponent* RootComponent = nullptr;
 

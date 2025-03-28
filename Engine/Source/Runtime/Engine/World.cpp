@@ -6,8 +6,15 @@
 #include "LevelEditor/SLevelEditor.h"
 #include "Engine/FLoaderOBJ.h"
 #include "Classes/Components/StaticMeshComponent.h"
+#include "Components/CubeComp.h"
 #include "Engine/StaticMeshActor.h"
 #include "Components/SkySphereComponent.h"
+#include "Components/SphereComp.h"
+#include "Container/Octree.h"
+#include "Math/Frustum.h"
+#include "Math/JungleMath.h"
+#include "UnrealEd/PrimitiveBatch.h"
+#include "UObject/UObjectIterator.h"
 
 
 void UWorld::Initialize()
@@ -16,12 +23,14 @@ void UWorld::Initialize()
     CreateBaseObject();
     //SpawnObject(OBJ_CUBE);
     FManagerOBJ::CreateStaticMesh("Assets/Dodge/Dodge.obj");
-
+    /*
     FManagerOBJ::CreateStaticMesh("Assets/SkySphere.obj");
     AActor* SpawnedActor = SpawnActor<AActor>();
     USkySphereComponent* skySphere = SpawnedActor->AddComponent<USkySphereComponent>();
     skySphere->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"SkySphere.obj"));
-    skySphere->GetStaticMesh()->GetMaterials()[0]->Material->SetDiffuse(FVector((float)32/255, (float)171/255, (float)191/255));
+    skySphere->GetStaticMesh()->GetMaterials()[0]->Material->SetDiffuse(FVector((float)32 / 255, (float)171 / 255, (float)191 / 255));
+*/
+    BuildOctree();
 }
 
 void UWorld::CreateBaseObject()
@@ -41,6 +50,20 @@ void UWorld::CreateBaseObject()
     if (LocalGizmo == nullptr)
     {
         LocalGizmo = FObjectFactory::ConstructObject<UTransformGizmo>();
+    }
+    FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
+    for (int i = 0; i < 100; i++)
+    {
+        for (int j = 0; j < 100; j++)
+        {
+            AActor* SpawnedActor = SpawnActor<AActor>();
+            UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
+            apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
+            FVector newPos = FVector(i, j, 0);
+            SpawnedActor->SetActorLocation(newPos);
+            apple->UpdateWorldAABB();
+            
+        }
     }
 }
 
@@ -69,15 +92,13 @@ void UWorld::ReleaseBaseObject()
         delete EditorPlayer;
         EditorPlayer = nullptr;
     }
-
 }
 
 void UWorld::Tick(float DeltaTime)
 {
-	camera->TickComponent(DeltaTime);
-	EditorPlayer->Tick(DeltaTime);
-	LocalGizmo->Tick(DeltaTime);
-
+    camera->TickComponent(DeltaTime);
+    EditorPlayer->Tick(DeltaTime);
+    LocalGizmo->Tick(DeltaTime);
     // SpawnActor()에 의해 Actor가 생성된 경우, 여기서 BeginPlay 호출
     for (AActor* Actor : PendingBeginPlayActors)
     {
@@ -86,28 +107,28 @@ void UWorld::Tick(float DeltaTime)
     PendingBeginPlayActors.Empty();
 
     // 매 틱마다 Actor->Tick(...) 호출
-	for (AActor* Actor : ActorsArray)
-	{
-	    Actor->Tick(DeltaTime);
-	}
+    for (AActor* Actor : ActorsArray)
+    {
+        Actor->Tick(DeltaTime);
+    }
 }
 
 void UWorld::Release()
 {
-	for (AActor* Actor : ActorsArray)
-	{
-		Actor->EndPlay(EEndPlayReason::WorldTransition);
+    for (AActor* Actor : ActorsArray)
+    {
+        Actor->EndPlay(EEndPlayReason::WorldTransition);
         TSet<UActorComponent*> Components = Actor->GetComponents();
-	    for (UActorComponent* Component : Components)
-	    {
-	        GUObjectArray.MarkRemoveObject(Component);
-	    }
-	    GUObjectArray.MarkRemoveObject(Actor);
-	}
+        for (UActorComponent* Component : Components)
+        {
+            GUObjectArray.MarkRemoveObject(Component);
+        }
+        GUObjectArray.MarkRemoveObject(Actor);
+    }
     ActorsArray.Empty();
 
-	pickingGizmo = nullptr;
-	ReleaseBaseObject();
+    pickingGizmo = nullptr;
+    ReleaseBaseObject();
 
     GUObjectArray.ProcessPendingDestroyObjects();
 }
@@ -148,5 +169,38 @@ bool UWorld::DestroyActor(AActor* ThisActor)
 
 void UWorld::SetPickingGizmo(UObject* Object)
 {
-	pickingGizmo = Cast<USceneComponent>(Object);
+    pickingGizmo = Cast<USceneComponent>(Object);
+}
+
+void UWorld::BuildOctree()
+{
+    FVector MinBound = FVector(FLT_MAX,FLT_MAX,FLT_MAX);
+    FVector MaxBound = FVector(-FLT_MAX,-FLT_MAX,-FLT_MAX);
+    for (const auto* SceneComp : TObjectRange<USceneComponent>())
+    {
+        if (const auto* MeshComp = Cast<UMeshComponent>(SceneComp))
+        {
+            //const FBoundingBox& AABB = MeshComp->AABB;
+            //FBoundingBox WorldAABB = JungleMath::TransformAABB(AABB, SceneComp->GetOwner()->GetModelMatrix());
+            FBoundingBox WorldAABB = MeshComp->WorldAABB;
+            MinBound = FVector::Min(MinBound, WorldAABB.min);
+            MaxBound = FVector::Max(MaxBound, WorldAABB.max);
+        }
+    }
+    FVector Center = (MinBound + MaxBound) * 0.5f;
+    FVector Extents = (MaxBound - MinBound) * 0.5f;
+
+    // 가장 긴 축의 길이 기준
+    float MaxExtent = FMath::Max(Extents.x, FMath::Max(Extents.y, Extents.z));
+
+    // 정육면체 범위
+    FVector CubeExtent(MaxExtent, MaxExtent, MaxExtent);
+    FVector CubeMin = Center - CubeExtent;
+    FVector CubeMax = Center + CubeExtent;
+
+    FBoundingBox WorldBounds = FBoundingBox(CubeMin, CubeMax);
+
+    SceneOctree = new FOctree(WorldBounds);
+    SceneOctree->Build(); // 모든 컴포넌트 삽입
+    
 }

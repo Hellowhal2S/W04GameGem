@@ -20,6 +20,8 @@
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
 #include "Components/SkySphereComponent.h"
+#include "Container/Octree.h"
+#include "Math/Frustum.h"
 
 void FRenderer::Initialize(FGraphicsDevice* graphics)
 {
@@ -1022,6 +1024,61 @@ void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> Act
 void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
     PrepareShader();
+
+    FMatrix View = ActiveViewport->GetViewMatrix();
+    FMatrix Proj = ActiveViewport->GetProjectionMatrix();
+    FFrustum Frustum;
+    Frustum.ConstructFrustum(View*Proj);
+    
+    TArray<UPrimitiveComponent*> VisibleComponents;
+    if (World->SceneOctree)
+    {
+        World->SceneOctree->QueryVisible(Frustum, VisibleComponents);
+    }
+    
+    for (UPrimitiveComponent* Prim : VisibleComponents)
+    {
+        UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(Prim);
+        if (!StaticMeshComp || !StaticMeshComp->GetStaticMesh())
+            continue;
+
+        FMatrix Model = JungleMath::CreateModelMatrix(
+            StaticMeshComp->GetWorldLocation(),
+            StaticMeshComp->GetWorldRotation(),
+            StaticMeshComp->GetWorldScale()
+        );
+        FMatrix MVP = Model * View * Proj;
+        FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
+        FVector4 UUIDColor = StaticMeshComp->EncodeUUID() / 255.0f;
+
+        UpdateConstant(MVP, NormalMatrix, UUIDColor, World->GetSelectedActor() == StaticMeshComp->GetOwner());
+
+        if (USkySphereComponent* skysphere = Cast<USkySphereComponent>(StaticMeshComp))
+        {
+            UpdateTextureConstant(skysphere->UOffset, skysphere->VOffset);
+        }
+        else
+        {
+            UpdateTextureConstant(0, 0);
+        }
+
+        if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_AABB))
+        {
+            UPrimitiveBatch::GetInstance().RenderAABB(
+                StaticMeshComp->GetBoundingBox(),
+                StaticMeshComp->GetWorldLocation(),
+                Model
+            );
+        }
+
+        OBJ::FStaticMeshRenderData* renderData = StaticMeshComp->GetStaticMesh()->GetRenderData();
+        if (renderData)
+        {
+            RenderPrimitive(renderData, StaticMeshComp->GetStaticMesh()->GetMaterials(),
+                            StaticMeshComp->GetOverrideMaterials(), StaticMeshComp->GetselectedSubMeshIndex());
+        }
+    }
+    /*
     for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
     {
         FMatrix Model = JungleMath::CreateModelMatrix(
@@ -1066,7 +1123,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
         if (renderData == nullptr) continue;
 
         RenderPrimitive(renderData, StaticMeshComp->GetStaticMesh()->GetMaterials(), StaticMeshComp->GetOverrideMaterials(), StaticMeshComp->GetselectedSubMeshIndex());
-    }
+    }*/
 }
 
 void FRenderer::RenderGizmos(const UWorld* World, const std::shared_ptr<FEditorViewportClient>& ActiveViewport)
