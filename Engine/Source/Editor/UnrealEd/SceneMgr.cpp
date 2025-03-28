@@ -11,6 +11,9 @@
 #include "Components/SkySphereComponent.h"
 #include "Camera/CameraComponent.h"
 #include "UObject/Casts.h"
+#include "Engine/StaticMeshActor.h"
+#include "World.h"
+#include "Engine/FLoaderOBJ.h"
 
 using json = nlohmann::json;
 
@@ -58,6 +61,20 @@ SceneData FSceneMgr::ParseSceneData(const FString& jsonStr)
                 {
                     obj = FObjectFactory::ConstructObject<USkySphereComponent>();
                     USkySphereComponent* skySphere = static_cast<USkySphereComponent*>(obj);
+                }
+                else if (TypeName == "StaticMeshComp")
+                {
+                    UWorld* World = GEngineLoop.GetWorld();
+                    AActor* SpawnedActor = nullptr;
+                    std::string Path = value["ObjStaticMeshAsset"].get<std::string>();
+                    FString FileName = Path.substr(Path.find_last_of("/\\") + 1);
+                    FWString WFileName = FileName.ToWideString();
+
+                    AStaticMeshActor* TempActor = World->SpawnActor<AStaticMeshActor>();
+                    TempActor->SetActorLabel(TEXT("OBJ_CUBE"));
+                    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
+                    FManagerOBJ::CreateStaticMesh("Assets/" + FileName);
+                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(WFileName));
                 }
             }
 
@@ -121,7 +138,8 @@ SceneData FSceneMgr::ParseSceneData(const FString& jsonStr)
 
 FString FSceneMgr::LoadSceneFromFile(const FString& filename)
 {
-    std::ifstream inFile(*filename);
+    std::string NewFileName = *filename;
+    std::ifstream inFile(NewFileName);
     if (!inFile) {
         UE_LOG(LogLevel::Error, "Failed to open file for reading: %s", *filename);
         return FString();
