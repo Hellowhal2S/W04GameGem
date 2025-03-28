@@ -6,6 +6,8 @@
 #include "BaseGizmos/GizmoArrowComponent.h"
 #include "UObject/ObjectFactory.h"
 #include <fstream>
+
+#include "EditorViewportClient.h"
 #include "Components/UBillboardComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SkySphereComponent.h"
@@ -14,23 +16,48 @@
 #include "Engine/StaticMeshActor.h"
 #include "World.h"
 #include "Engine/FLoaderOBJ.h"
+#include "LevelEditor/SLevelEditor.h"
 
 using json = nlohmann::json;
 
-SceneData FSceneMgr::ParseSceneData(const FString& jsonStr)
+void FSceneMgr::ParseSceneData(const FString& jsonStr)
 {
     SceneData sceneData;
 
-    try {
+
         json j = json::parse(*jsonStr);
 
         // 버전과 NextUUID 읽기
-        sceneData.Version = j["Version"].get<int>();
+        // sceneData.Version = j["Version"].get<int>();
         sceneData.NextUUID = j["NextUUID"].get<int>();
 
+        auto perspectiveCamera = j["PerspectiveCamera"];
+        std::shared_ptr<FEditorViewportClient> activeViewportClient = GEngineLoop.GetLevelEditor()->GetActiveViewportClient();
+
+        if (perspectiveCamera.contains("Location")) {
+            auto location = perspectiveCamera["Location"].get<std::vector<float>>();
+            activeViewportClient->ViewTransformPerspective.SetLocation(FVector(location[0], location[1], location[2]));
+        }
+        if (perspectiveCamera.contains("Rotation")) {
+            auto rotation = perspectiveCamera["Rotation"].get<std::vector<float>>();
+            activeViewportClient->ViewTransformPerspective.SetRotation(FVector(rotation[0], rotation[1], rotation[2]));
+        }
+        if (perspectiveCamera.contains("FOV")) {
+            auto fovArray = perspectiveCamera["FOV"].get<std::vector<float>>();
+            activeViewportClient->SetViewFOV(fovArray[0]);
+        }
+        if (perspectiveCamera.contains("NearClip")) {
+            auto nearClipArray = perspectiveCamera["NearClip"].get<std::vector<float>>();
+            activeViewportClient->SetNearClip(nearClipArray[0]);
+        }
+        if (perspectiveCamera.contains("FarClip")) {
+            auto farClipArray = perspectiveCamera["FarClip"].get<std::vector<float>>();
+            activeViewportClient->SetFarClip(farClipArray[0]);
+        }
         // Primitives 처리 (C++14 스타일)
         auto primitives = j["Primitives"];
-        for (auto it = primitives.begin(); it != primitives.end(); ++it) {
+        for (auto it = primitives.begin(); it != primitives.end(); ++it)
+        {
             int id = std::stoi(it.key());  // Key는 문자열, 숫자로 변환
             const json& value = it.value();
             UObject* obj = nullptr;
@@ -71,69 +98,23 @@ SceneData FSceneMgr::ParseSceneData(const FString& jsonStr)
                     FWString WFileName = FileName.ToWideString();
 
                     AStaticMeshActor* TempActor = World->SpawnActor<AStaticMeshActor>();
+                    TempActor->SetActorLocation(FVector(value["Location"].get<std::vector<float>>()[0],
+                          value["Location"].get<std::vector<float>>()[1],
+                          value["Location"].get<std::vector<float>>()[2]));
+                    TempActor->SetActorRotation(FVector(value["Rotation"].get<std::vector<float>>()[0],
+                        value["Rotation"].get<std::vector<float>>()[1],
+                        value["Rotation"].get<std::vector<float>>()[2]));
+                    TempActor->SetActorScale(FVector(value["Scale"].get<std::vector<float>>()[0],
+                        value["Scale"].get<std::vector<float>>()[1],
+                        value["Scale"].get<std::vector<float>>()[2]
+                        ));
                     TempActor->SetActorLabel(TEXT("OBJ_CUBE"));
                     UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
                     FManagerOBJ::CreateStaticMesh("Assets/" + FileName);
                     MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(WFileName));
                 }
             }
-
-            USceneComponent* sceneComp = static_cast<USceneComponent*>(obj);
-            //Todo : 여기다가 Obj Maeh저장후 일기
-            //if (value.contains("ObjStaticMeshAsset"))
-            if (value.contains("Location")) sceneComp->SetLocation(FVector(value["Location"].get<std::vector<float>>()[0],
-                value["Location"].get<std::vector<float>>()[1],
-                value["Location"].get<std::vector<float>>()[2]));
-            if (value.contains("Rotation")) sceneComp->SetRotation(FVector(value["Rotation"].get<std::vector<float>>()[0],
-                value["Rotation"].get<std::vector<float>>()[1],
-                value["Rotation"].get<std::vector<float>>()[2]));
-            if (value.contains("Scale")) sceneComp->SetScale(FVector(value["Scale"].get<std::vector<float>>()[0],
-                value["Scale"].get<std::vector<float>>()[1],
-                value["Scale"].get<std::vector<float>>()[2]));
-            if (value.contains("Type")) {
-                UPrimitiveComponent* primitiveComp = Cast<UPrimitiveComponent>(sceneComp);
-                if (primitiveComp) {
-                    primitiveComp->SetType(value["Type"].get<std::string>());
-                }
-                else {
-                    std::string name = value["Type"].get<std::string>();
-                    sceneComp->NamePrivate = name.c_str();
-                }
-            }
-            sceneData.Primitives[id] = sceneComp;
         }
-
-        auto perspectiveCamera = j["PerspectiveCamera"];
-        for (auto it = perspectiveCamera.begin(); it != perspectiveCamera.end(); ++it) {
-            int id = std::stoi(it.key());  // Key는 문자열, 숫자로 변환
-            const json& value = it.value();
-            UObject* obj = FObjectFactory::ConstructObject<UCameraComponent>();
-            UCameraComponent* camera = static_cast<UCameraComponent*>(obj);
-            if (value.contains("Location")) camera->SetLocation(FVector(value["Location"].get<std::vector<float>>()[0],
-                    value["Location"].get<std::vector<float>>()[1],
-                    value["Location"].get<std::vector<float>>()[2]));
-            if (value.contains("Rotation")) camera->SetRotation(FVector(value["Rotation"].get<std::vector<float>>()[0],
-                value["Rotation"].get<std::vector<float>>()[1],
-                value["Rotation"].get<std::vector<float>>()[2]));
-            if (value.contains("Rotation")) camera->SetRotation(FVector(value["Rotation"].get<std::vector<float>>()[0],
-                value["Rotation"].get<std::vector<float>>()[1],
-                value["Rotation"].get<std::vector<float>>()[2]));
-            if (value.contains("FOV")) camera->SetFOV(value["FOV"].get<float>());
-            if (value.contains("NearClip")) camera->SetNearClip(value["NearClip"].get<float>());
-            if (value.contains("FarClip")) camera->SetNearClip(value["FarClip"].get<float>());
-            
-            
-            sceneData.Cameras[id] = camera;
-        }
-    }
-    catch (const std::exception& e) {
-        FString errorMessage = "Error parsing JSON: ";
-        errorMessage += e.what();
-
-        UE_LOG(LogLevel::Error, "No Json file");
-    }
-
-    return sceneData;
 }
 
 FString FSceneMgr::LoadSceneFromFile(const FString& filename)

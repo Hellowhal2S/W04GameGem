@@ -12,7 +12,7 @@ struct SceneData {
 class FSceneMgr
 {
 public:
-    static SceneData ParseSceneData(const FString& jsonStr);
+    static void ParseSceneData(const FString& jsonStr);
     static FString LoadSceneFromFile(const FString& filename);
     static std::string SerializeSceneData(const SceneData& sceneData);
     static bool SaveSceneToFile(const FString& filename, const SceneData& sceneData);

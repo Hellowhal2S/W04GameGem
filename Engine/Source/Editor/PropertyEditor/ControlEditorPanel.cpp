@@ -1,4 +1,4 @@
-#include "ControlEditorPanel.h"
+﻿#include "ControlEditorPanel.h"
 
 #include "World.h"
 #include "Actors/Player.h"
@@ -109,7 +109,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
 
             // TODO: Load Scene
             FString NewFile = SceneMgr->LoadSceneFromFile(FileName);
-            SceneData NewData = SceneMgr->ParseSceneData(NewFile);
+            SceneMgr->ParseSceneData(NewFile);
 
             //while (!NewData.Cameras.IsEmpty())
             //{
