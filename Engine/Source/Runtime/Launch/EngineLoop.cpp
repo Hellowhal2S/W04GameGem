@@ -8,6 +8,8 @@
 #include "UnrealClient.h"
 #include "slate/Widgets/Layout/SSplitter.h"
 #include "LevelEditor/SLevelEditor.h"
+#include "Profiling/PlatformTime.h"
+#include "Profiling/StatRegistry.h"
 
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -174,8 +176,10 @@ void FEngineLoop::Tick()
     LARGE_INTEGER startTime, endTime;
     double elapsedTime = 1.0;
 
+    FStatRegistry::SetMainFrameStat("MainFrame"); // 앱 시작 시 1회만 호출
     while (bIsExit == false)
     {
+		FScopeCycleCounter Timer("MainFrame");
         QueryPerformanceCounter(&startTime);
 
         MSG msg;
@@ -213,6 +217,7 @@ void FEngineLoop::Tick()
             elapsedTime = (endTime.QuadPart - startTime.QuadPart) * 1000.0 / frequency.QuadPart;
         }
         while (elapsedTime < targetFrameTime);
+		FStatRegistry::RegisterResult(Timer); 
     }
 }
 

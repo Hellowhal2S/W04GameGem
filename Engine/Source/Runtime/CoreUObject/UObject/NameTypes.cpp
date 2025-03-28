@@ -424,7 +424,9 @@ FName::FName(const FString& Name)
 	: FName(FNameHelper::MakeFName(*Name, Name.Len()))
 {
 }
-
+FName::FName(uint32 InDisplayIndex)
+        : DisplayIndex(InDisplayIndex), ComparisonIndex(InDisplayIndex)
+{}
 FString FName::ToString() const
 {
 	if (DisplayIndex == 0 && ComparisonIndex == 0)

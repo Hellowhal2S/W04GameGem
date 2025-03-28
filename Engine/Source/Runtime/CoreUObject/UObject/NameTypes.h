@@ -16,6 +16,7 @@ public:
     FName(const WIDECHAR* Name);
     FName(const ANSICHAR* Name);
     FName(const FString& Name);
+	FName(uint32 InDisplayIndex);
 
     FString ToString() const;
     uint32 GetDisplayIndex() const { return DisplayIndex; }

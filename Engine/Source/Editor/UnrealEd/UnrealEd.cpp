@@ -3,6 +3,7 @@
 
 #include "PropertyEditor/ControlEditorPanel.h"
 #include "PropertyEditor/OutlinerEditorPanel.h"
+#include "PropertyEditor/ProfilingEditorPanel.h"
 #include "PropertyEditor/PropertyEditorPanel.h"
 
 void UnrealEd::Initialize()
@@ -15,6 +16,9 @@ void UnrealEd::Initialize()
     
     auto PropertyPanel = std::make_shared<PropertyEditorPanel>();
     Panels["PropertyPanel"] = PropertyPanel;
+
+    auto ProfilingPanel = std::make_shared<ProfilingEditorPanel>();
+    Panels["ProfilingPanel"] = ProfilingPanel;
 }
 
 void UnrealEd::Render() const

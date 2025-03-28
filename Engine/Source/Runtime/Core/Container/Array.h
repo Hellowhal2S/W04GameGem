@@ -72,6 +72,7 @@ public:
 
 	/** 특정 위치에 있는 요소를 제거합니다. */
     void RemoveAt(SizeType Index);
+	void RemoveAt(SizeType Index, SizeType Count);
 
 	/** Predicate에 부합하는 모든 요소를 제거합니다. */
     template <typename Predicate>
@@ -255,7 +256,14 @@ void TArray<T, Allocator>::RemoveAt(SizeType Index)
         ContainerPrivate.erase(ContainerPrivate.begin() + Index);
     }
 }
-
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::RemoveAt(SizeType Index, SizeType Count)
+{
+    if (Index >= 0 && static_cast<SizeType>(Index + Count) <= ContainerPrivate.size())
+    {
+        ContainerPrivate.erase(ContainerPrivate.begin() + Index, ContainerPrivate.begin() + Index + Count);
+    }
+}
 template <typename T, typename Allocator>
 template <typename Predicate>
     requires std::is_invocable_r_v<bool, Predicate, const T&>
