@@ -9,8 +9,8 @@
 void ProfilingEditorPanel::Render()
 {
     ImGui::SetNextWindowPos(ImVec2(10, 50), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.35f); // 반투명 배경
-
+    //ImGui::SetNextWindowBgAlpha(0.35f); // 반투명 배경
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 1)); // 완전한 검정 배경
     if (ImGui::Begin("Performance", nullptr,
                      ImGuiWindowFlags_NoTitleBar |
                      ImGuiWindowFlags_NoResize |
@@ -19,7 +19,7 @@ void ProfilingEditorPanel::Render()
                      ImGuiWindowFlags_NoSavedSettings |
                      ImGuiWindowFlags_NoBringToFrontOnFocus
                      ))
-    {
+    {   
         // FPS 표시
         static TStatId Stat_Frame("MainFrame");
         float fps = static_cast<float>(FStatRegistry::GetFPS(Stat_Frame));
@@ -46,6 +46,7 @@ void ProfilingEditorPanel::Render()
         }
     }
     ImGui::End();
+    ImGui::PopStyleColor();
 }
 void ProfilingEditorPanel::OnResize(HWND hWnd)
 {

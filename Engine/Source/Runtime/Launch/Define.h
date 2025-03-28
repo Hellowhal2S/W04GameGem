@@ -106,6 +106,38 @@ struct FObjMaterialInfo
     FString AlphaTextureName;    // map_d : Alpha texture
     FWString AlphaTexturePath;
 };
+inline bool operator==(const FObjMaterialInfo& A, const FObjMaterialInfo& B)
+{
+    return A.MTLName == B.MTLName &&
+           A.bHasTexture == B.bHasTexture &&
+           A.bTransparent == B.bTransparent &&
+
+           A.Diffuse == B.Diffuse &&
+           A.Specular == B.Specular &&
+           A.Ambient == B.Ambient &&
+           A.Emissive == B.Emissive &&
+
+           FMath::IsNearlyEqual(A.SpecularScalar, B.SpecularScalar) &&
+           FMath::IsNearlyEqual(A.DensityScalar, B.DensityScalar) &&
+           FMath::IsNearlyEqual(A.TransparencyScalar, B.TransparencyScalar) &&
+
+           A.IlluminanceModel == B.IlluminanceModel &&
+
+           A.DiffuseTextureName == B.DiffuseTextureName &&
+           A.DiffuseTexturePath == B.DiffuseTexturePath &&
+
+           A.AmbientTextureName == B.AmbientTextureName &&
+           A.AmbientTexturePath == B.AmbientTexturePath &&
+
+           A.SpecularTextureName == B.SpecularTextureName &&
+           A.SpecularTexturePath == B.SpecularTexturePath &&
+
+           A.BumpTextureName == B.BumpTextureName &&
+           A.BumpTexturePath == B.BumpTexturePath &&
+
+           A.AlphaTextureName == B.AlphaTextureName &&
+           A.AlphaTexturePath == B.AlphaTexturePath;
+}
 
 // Cooked Data
 namespace OBJ

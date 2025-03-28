@@ -13,6 +13,8 @@
 #include "Container/Octree.h"
 #include "Math/Frustum.h"
 #include "Math/JungleMath.h"
+#include "Profiling/PlatformTime.h"
+#include "Profiling/StatRegistry.h"
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/UObjectIterator.h"
 
@@ -20,7 +22,9 @@
 void UWorld::Initialize()
 {
     // TODO: Load Scene
+    FScopeCycleCounter Timer("CreateBaseObject");
     CreateBaseObject();
+    FStatRegistry::RegisterResult(Timer); 
     //SpawnObject(OBJ_CUBE);
 
     // FManagerOBJ::CreateStaticMesh("Assets/SkySphere.obj");
@@ -37,7 +41,32 @@ void UWorld::CreateBaseObject()
     {
         EditorPlayer = FObjectFactory::ConstructObject<AEditorPlayer>();;
     }
+    FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
 
+
+    for (int i = 0; i < 30; i++)
+    {
+        for (int j = 0; j < 30; j++)
+        {
+            for (int k = 0; k < 20; k++)
+            {
+                FScopeCycleCounter Timer1("SpawnActor");
+                AActor* SpawnedActor = SpawnActor<AActor>();
+                FStatRegistry::RegisterResult(Timer1); 
+                FScopeCycleCounter Timer2("AddComponent");
+                UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
+                FStatRegistry::RegisterResult(Timer2); 
+                FScopeCycleCounter Timer3("GetStaticMesh");
+                apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
+                FStatRegistry::RegisterResult(Timer3); 
+                FScopeCycleCounter Timer4("init");
+                FVector newPos = FVector(i, j, k);
+                SpawnedActor->SetActorLocation(newPos);
+                apple->UpdateWorldAABB();
+                FStatRegistry::RegisterResult(Timer4); 
+            }
+        }
+    }
     // if (LocalGizmo == nullptr)
     // {
     //     LocalGizmo = FObjectFactory::ConstructObject<UTransformGizmo>();
@@ -70,7 +99,7 @@ void UWorld::Tick(float DeltaTime)
 	// camera->TickComponent(DeltaTime);
 	EditorPlayer->Tick(DeltaTime);
 	// LocalGizmo->Tick(DeltaTime);
-
+    FScopeCycleCounter Timer("ActorTick");
     // SpawnActor()에 의해 Actor가 생성된 경우, 여기서 BeginPlay 호출
     for (AActor* Actor : PendingBeginPlayActors)
     {
@@ -81,8 +110,9 @@ void UWorld::Tick(float DeltaTime)
     // 매 틱마다 Actor->Tick(...) 호출
     for (AActor* Actor : ActorsArray)
     {
-        Actor->Tick(DeltaTime);
+        //Actor->Tick(DeltaTime);
     }
+    FStatRegistry::RegisterResult(Timer); 
 }
 
 void UWorld::Release()
@@ -146,6 +176,7 @@ void UWorld::SetPickingGizmo(UObject* Object)
 
 void UWorld::BuildOctree()
 {
+    FScopeCycleCounter Timer("BuildOctree");
     FVector MinBound = FVector(FLT_MAX,FLT_MAX,FLT_MAX);
     FVector MaxBound = FVector(-FLT_MAX,-FLT_MAX,-FLT_MAX);
     for (const auto* SceneComp : TObjectRange<USceneComponent>())
@@ -154,6 +185,8 @@ void UWorld::BuildOctree()
         {
             //const FBoundingBox& AABB = MeshComp->AABB;
             //FBoundingBox WorldAABB = JungleMath::TransformAABB(AABB, SceneComp->GetOwner()->GetModelMatrix());
+            auto *PrimComp = Cast<UPrimitiveComponent>(MeshComp);
+            PrimComp->UpdateWorldAABB();
             FBoundingBox WorldAABB = MeshComp->WorldAABB;
             MinBound = FVector::Min(MinBound, WorldAABB.min);
             MaxBound = FVector::Max(MaxBound, WorldAABB.max);
@@ -170,9 +203,20 @@ void UWorld::BuildOctree()
     FVector CubeMin = Center - CubeExtent;
     FVector CubeMax = Center + CubeExtent;
 
-    FBoundingBox WorldBounds = FBoundingBox(CubeMin, CubeMax);
-
+    //FBoundingBox WorldBounds = FBoundingBox(CubeMin, CubeMax);
+    FBoundingBox WorldBounds = FBoundingBox(MinBound, MaxBound);
+    delete SceneOctree;
     SceneOctree = new FOctree(WorldBounds);
     SceneOctree->Build(); // 모든 컴포넌트 삽입
-    
+    FStatRegistry::RegisterResult(Timer); 
+}
+void UWorld::ClearScene()
+{
+    // 1. 모든 Actor Destroy
+    for (UPrimitiveComponent* Prim : TObjectRange<UPrimitiveComponent>())
+    {
+        Prim->GetOwner()->Destroy();
+        Prim->DestroyComponent();
+        
+    }
 }

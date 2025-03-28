@@ -4,6 +4,7 @@
 #include "Define.h"
 #include "Math.h"
 
+class UPrimitiveBatch;
 class FFrustum;
 class UPrimitiveComponent;
 
@@ -31,7 +32,9 @@ public:
 
     void Build();
     void QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
-
+    void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node);
+    const FOctreeNode* GetRoot() const{return Root;};
 private:
     FOctreeNode* Root;
 };
+void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node,int MaxDepth);

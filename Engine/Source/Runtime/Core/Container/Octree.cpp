@@ -4,6 +4,9 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "Math/Frustum.h"
+#include "Profiling/PlatformTime.h"
+#include "Profiling/StatRegistry.h"
+#include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/Casts.h"
 #include "UObject/UObjectIterator.h"
 
@@ -28,7 +31,7 @@ void FOctreeNode::Insert(UPrimitiveComponent* Component, int MaxDepth)
     }
 
     if (bIsLeaf)
-    {
+    {/*
         FVector Center = (Bounds.min + Bounds.max) * 0.5f;
         constexpr float Epsilon = 1e-5f;
         for (int i = 0; i < 8; ++i)
@@ -49,6 +52,25 @@ void FOctreeNode::Insert(UPrimitiveComponent* Component, int MaxDepth)
             if (FMath::Abs(Max.y - Min.y) < Epsilon) Max.y = Min.y + Epsilon;
             if (FMath::Abs(Max.z - Min.z) < Epsilon) Max.z = Min.z + Epsilon;
 
+            Children[i] = new FOctreeNode(FBoundingBox(Min, Max), Depth + 1);
+
+        
+        }*/
+        FVector Center = (Bounds.min + Bounds.max) * 0.5f;
+        for (int i = 0; i < 8; ++i)
+        {
+            FVector Min = {
+                (i & 1) ? Center.x : Bounds.min.x,
+                (i & 2) ? Center.y : Bounds.min.y,
+                (i & 4) ? Center.z : Bounds.min.z
+            };
+            FVector Max = {
+                (i & 1) ? Bounds.max.x : Center.x,
+                (i & 2) ? Bounds.max.y : Center.y,
+                (i & 4) ? Bounds.max.z : Center.z
+            };
+        
+            // 정확히 잘린 조각이므로 보정(Epsilon)은 오히려 왜곡을 일으킬 수 있음
             Children[i] = new FOctreeNode(FBoundingBox(Min, Max), Depth + 1);
         }
         bIsLeaf = false;
@@ -118,4 +140,21 @@ void FOctree::Build()
 void FOctree::QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const
 {
     Root->Query(Frustum, OutResults);
+}
+void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node,int MaxDepth)
+{
+    if (!Node) return;
+
+    const FVector Center = (Node->Bounds.min + Node->Bounds.max) * 0.5f;
+    const FMatrix Identity = FMatrix::Identity;
+
+    PrimitiveBatch->RenderAABB(Node->Bounds, FVector::ZeroVector, Identity);
+    if (Node->Depth==MaxDepth)return;
+    if (!Node->bIsLeaf)
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            DebugRenderOctreeNode(PrimitiveBatch, Node->Children[i],MaxDepth);
+        }
+    }
 }

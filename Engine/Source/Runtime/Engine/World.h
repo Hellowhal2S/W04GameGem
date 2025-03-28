@@ -56,14 +56,16 @@ private:
     UCameraComponent* camera = nullptr;
     AEditorPlayer* EditorPlayer = nullptr;
 
-    void BuildOctree();
-    void ClearOctree();
-    void DebugDrawFrustum(const FFrustum& Frustum);
 
 public:
     UObject* worldGizmo = nullptr;
 
     FOctree* SceneOctree;
+    
+    void BuildOctree();
+    void ClearOctree();
+    void DebugDrawFrustum(const FFrustum& Frustum);
+    
     const TSet<AActor*>& GetActors() const { return ActorsArray; }
 
     UTransformGizmo* LocalGizmo = nullptr;
@@ -81,6 +83,8 @@ public:
     UObject* GetWorldGizmo() const { return worldGizmo; }
     USceneComponent* GetPickingGizmo() const { return pickingGizmo; }
     void SetPickingGizmo(UObject* Object);
+
+    void ClearScene();
 };
 
 
