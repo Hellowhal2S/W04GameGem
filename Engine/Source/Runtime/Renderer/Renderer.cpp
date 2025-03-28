@@ -1016,6 +1016,7 @@ void FRenderer::ClearRenderArr()
 
 void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
+    FScopeCycleCounter Timer("FRenderer::Render");
     Graphics->DeviceContext->RSSetViewports(1, &ActiveViewport->GetD3DViewport());
     Graphics->ChangeRasterizer(ActiveViewport->GetViewMode());
     ChangeViewMode(ActiveViewport->GetViewMode());
@@ -1023,12 +1024,13 @@ void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> Act
     UPrimitiveBatch::GetInstance().RenderBatch(ActiveViewport->GetViewMatrix(), ActiveViewport->GetProjectionMatrix());
 
     // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
-        RenderStaticMeshes(World, ActiveViewport);
+    RenderStaticMeshes(World, ActiveViewport);
     // RenderGizmos(World, ActiveViewport);
     // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText))
         // RenderBillboards(World, ActiveViewport);
     // RenderLight(World, ActiveViewport);
     ClearRenderArr();
+    FStatRegistry::RegisterResult(Timer); 
 }
 
 void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
@@ -1039,7 +1041,11 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     FMatrix View = ActiveViewport->GetViewMatrix();
     FMatrix Proj = ActiveViewport->GetProjectionMatrix();
     Frustum.ConstructFrustum(View*Proj);
-    
+    FStatRegistry::RegisterResult(FrustumTimer); 
+    FScopeCycleCounter BatchTimer("BatchTimer");
+    World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
+    FStatRegistry::RegisterResult(BatchTimer); 
+    /*
     TArray<UPrimitiveComponent*> VisibleComponents;
     if (World->SceneOctree)
     {
@@ -1059,7 +1065,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     RenderSortedEntries(World,ActiveViewport,SortedEntries, View*Proj);
     FStatRegistry::RegisterResult(Timer2);
     UE_LOG(LogLevel::Display,"Visible Obj:%d",VisibleComponents.Len());
-
+*/
 }
 void FRenderer::RenderVisibleComponents(UWorld* World,TArray<UPrimitiveComponent*>& VisibleComponents,FMatrix VP)
 {

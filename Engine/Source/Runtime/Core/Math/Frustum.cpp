@@ -121,3 +121,34 @@ bool FFrustum::Intersect(const FBoundingBox& AABB) const
     }
     return true;
 }
+EFrustumContainment FFrustum::CheckContainment(const FBoundingBox& AABB) const
+{
+    bool bAllInside = true;
+
+    for (int i = 0; i < (int)EFrustumPlane::Count; ++i)
+    {
+        const FFrustumPlane& Plane = Planes[i];
+
+        // AABB의 중심과 반경
+        FVector Center = (AABB.min + AABB.max) * 0.5f;
+        FVector Extents = (AABB.max - AABB.min) * 0.5f;
+
+        float Radius =
+            Extents.x * FMath::Abs(Plane.Normal.x) +
+            Extents.y * FMath::Abs(Plane.Normal.y) +
+            Extents.z * FMath::Abs(Plane.Normal.z);
+
+        float DistanceToCenter = Plane.Normal.Dot(Center) + Plane.Distance;
+
+        if (DistanceToCenter + Radius < 0)
+        {
+            return EFrustumContainment::Outside; // 완전히 밖
+        }
+        else if (DistanceToCenter - Radius < 0)
+        {
+            bAllInside = false; // 완전히 포함된 건 아님
+        }
+    }
+
+    return bAllInside ? EFrustumContainment::Contains : EFrustumContainment::Intersects;
+}

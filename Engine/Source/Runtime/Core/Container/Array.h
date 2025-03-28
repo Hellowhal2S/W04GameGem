@@ -115,6 +115,7 @@ public:
 
         return true;
     }
+    void Append(const TArray& OtherArray);
 };
 
 
@@ -352,3 +353,8 @@ void TArray<T, Allocator>::Sort(const Compare& CompFn)
 }
 
 template <typename T, typename Allocator = FDefaultAllocator<T>> class TArray;
+template <typename T, typename Allocator>
+void TArray<T, Allocator>::Append(const TArray& OtherArray)
+{
+    ContainerPrivate.insert(ContainerPrivate.end(), OtherArray.begin(), OtherArray.end());
+}

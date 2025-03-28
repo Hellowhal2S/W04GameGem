@@ -50,20 +50,12 @@ void UWorld::CreateBaseObject()
         {
             for (int k = 0; k < 20; k++)
             {
-                FScopeCycleCounter Timer1("SpawnActor");
                 AActor* SpawnedActor = SpawnActor<AActor>();
-                FStatRegistry::RegisterResult(Timer1); 
-                FScopeCycleCounter Timer2("AddComponent");
                 UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
-                FStatRegistry::RegisterResult(Timer2); 
-                FScopeCycleCounter Timer3("GetStaticMesh");
                 apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
-                FStatRegistry::RegisterResult(Timer3); 
-                FScopeCycleCounter Timer4("init");
                 FVector newPos = FVector(i, j, k);
                 SpawnedActor->SetActorLocation(newPos);
                 apple->UpdateWorldAABB();
-                FStatRegistry::RegisterResult(Timer4); 
             }
         }
     }
@@ -99,7 +91,6 @@ void UWorld::Tick(float DeltaTime)
 	// camera->TickComponent(DeltaTime);
 	EditorPlayer->Tick(DeltaTime);
 	// LocalGizmo->Tick(DeltaTime);
-    FScopeCycleCounter Timer("ActorTick");
     // SpawnActor()에 의해 Actor가 생성된 경우, 여기서 BeginPlay 호출
     for (AActor* Actor : PendingBeginPlayActors)
     {
@@ -112,7 +103,6 @@ void UWorld::Tick(float DeltaTime)
     {
         //Actor->Tick(DeltaTime);
     }
-    FStatRegistry::RegisterResult(Timer); 
 }
 
 void UWorld::Release()
@@ -208,6 +198,8 @@ void UWorld::BuildOctree()
     delete SceneOctree;
     SceneOctree = new FOctree(WorldBounds);
     SceneOctree->Build(); // 모든 컴포넌트 삽입
+    SceneOctree->GetRoot()->BuildBatchRenderData();   // 2단계: 머티리얼 기준 정점 수집
+    SceneOctree->GetRoot()->BuildBatchBuffers(FEngineLoop::renderer);
     FStatRegistry::RegisterResult(Timer); 
 }
 void UWorld::ClearScene()
