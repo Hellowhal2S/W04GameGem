@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SIMD/FVectorSimdUtility.h"
+#include "SIMD/SimdUtility.h"
 
 #include <DirectXMath.h>
 
@@ -46,7 +46,7 @@ struct FVector
 #if USE_SIMD
         __m128 a = SIMD::LoadVec3(x, y, z);
         __m128 b = SIMD::LoadVec3(other.x, other.y, other.z);
-        __m128 result = SIMD::Vec3Sub(a, b);
+        __m128 result = SIMD::Sub(a, b);
         //return SIMD::ToFVector(result);
         float f[3];
         SIMD::StoreVec3(result, f);
@@ -61,7 +61,7 @@ struct FVector
 #if USE_SIMD
         __m128 a = SIMD::LoadVec3(x, y, z);
         __m128 b = SIMD::LoadVec3(other.x, other.y, other.z);
-        __m128 result = SIMD::Vec3Add(a, b);
+        __m128 result = SIMD::Add(a, b);
         //return SIMD::ToFVector(result);f
         float f[3];
         SIMD::StoreVec3(result, f);
@@ -80,7 +80,7 @@ struct FVector
 #if USE_SIMD
         __m128 a = SIMD::LoadVec3(x, y, z);
         __m128 b = SIMD::LoadVec3(other.x, other.y, other.z);
-        return SIMD::Vec3Dot(a, b);
+        return SIMD::Dot(a, b);
 #else
         return x * other.x + y * other.y + z * other.z;
 #endif
@@ -88,7 +88,12 @@ struct FVector
 
     // 벡터 크기
     float Magnitude() const {
+#if USE_SIMD
+        __m128 v = SIMD::LoadVec3(x, y, z);
+        return sqrt(SIMD::Dot(v, v));
+#else
         return sqrt(x * x + y * y + z * z);
+#endif
     }
 
     // 벡터 정규화
@@ -121,7 +126,7 @@ struct FVector
 #if USE_SIMD
         __m128 vec = SIMD::LoadVec3(x, y, z);
         __m128 scale = _mm_set1_ps(scalar);
-        __m128 result = SIMD::Vec3Mul(vec, scale);
+        __m128 result = SIMD::Mul(vec, scale);
         float f[3];
         SIMD::StoreVec3(result, f);
         return FVector(f[0], f[1], f[2]);
@@ -167,16 +172,44 @@ struct FVector
 };
 inline FVector FVector::operator/(const FVector& Other) const
 {
+#if USE_SIMD
+    __m128 a = SIMD::LoadVec3(x, y, z);
+    __m128 b = SIMD::LoadVec3(Other.x, Other.y, Other.z);
+    __m128 result = SIMD::DivCorrect(a, b);
+    float f[3];
+    SIMD::StoreVec3(result, f);
+    return FVector(f[0], f[1], f[2]);
+#else
     return {x / Other.x, y / Other.y, z / Other.z};
+#endif
 }
 
 inline FVector FVector::operator/(float Scalar) const
 {
+#if USE_SIMD
+    __m128 vec = SIMD::LoadVec3(x, y, z);
+    __m128 scale = _mm_set1_ps(Scalar);
+    __m128 result = SIMD::DivCorrect(vec, scale);
+    float f[3];
+    SIMD::StoreVec3(result, f);
+    return FVector(f[0], f[1], f[2]);
+#else
     return {x / Scalar,  y / Scalar, z / Scalar};
+#endif
 }
 
 inline FVector& FVector::operator/=(float Scalar)
 {
+#if USE_SIMD
+    __m128 vec = SIMD::LoadVec3(x, y, z);
+    __m128 scalarVec = _mm_set1_ps(Scalar);
+    __m128 result = SIMD::DivCorrect(vec, scalarVec);
+    float f[3];
+    SIMD::StoreVec3(result, f);
+    x = f[0]; y = f[1]; z = f[2];
+    return *this;
+#else
     x /= Scalar; y /= Scalar; z /= Scalar;
     return *this;
+#endif
 }
