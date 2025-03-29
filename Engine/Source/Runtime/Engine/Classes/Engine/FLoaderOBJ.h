@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <queue>
 #include <sstream>
 
 #include "Define.h"
@@ -422,272 +423,13 @@ struct FLoaderOBJ
 struct FManagerOBJ
 {
 public:
-    static OBJ::FStaticMeshRenderData* LoadObjStaticMeshAsset(const FString& PathFileName)
-    {
-        OBJ::FStaticMeshRenderData* NewStaticMesh = new OBJ::FStaticMeshRenderData();
-        
-        if ( const auto It = ObjStaticMeshMap.Find(PathFileName))
-        {
-            return *It;
-        }
-        
-        FWString BinaryPath = (PathFileName + ".bin").ToWideString();
-        if (std::ifstream(BinaryPath).good())
-        {
-            if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
-            {
-                ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
-                return NewStaticMesh;
-            }
-        }
-        
-        // Parse OBJ
-        FObjInfo NewObjInfo;
-        bool Result = FLoaderOBJ::ParseOBJ(PathFileName, NewObjInfo);
+    static OBJ::FStaticMeshRenderData* LoadObjStaticMeshAsset(const FString& PathFileName);
 
-        if (!Result)
-        {
-            delete NewStaticMesh;
-            return nullptr;
-        }
+    static void CombineMaterialIndex(OBJ::FStaticMeshRenderData& OutFStaticMesh);
 
-        // Material
-        if (NewObjInfo.MaterialSubsets.Num() > 0)
-        {
-            Result = FLoaderOBJ::ParseMaterial(NewObjInfo, *NewStaticMesh);
+    static bool SaveStaticMeshToBinary(const FWString& FilePath, const OBJ::FStaticMeshRenderData& StaticMesh);
 
-            if (!Result)
-            {
-                delete NewStaticMesh;
-                return nullptr;
-            }
-
-            CombineMaterialIndex(*NewStaticMesh);
-
-            for (int materialIndex = 0; materialIndex < NewStaticMesh->Materials.Num(); materialIndex++) {
-                CreateMaterial(NewStaticMesh->Materials[materialIndex]);
-            }
-        }
-        
-        // Convert FStaticMeshRenderData
-        Result = FLoaderOBJ::ConvertToStaticMesh(NewObjInfo, *NewStaticMesh);
-        if (!Result)
-        {
-            delete NewStaticMesh;
-            return nullptr;
-        }
-
-        SaveStaticMeshToBinary(BinaryPath, *NewStaticMesh);
-        ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
-        return NewStaticMesh;
-    }
-    
-    static void CombineMaterialIndex(OBJ::FStaticMeshRenderData& OutFStaticMesh)
-    {
-        for (int32 i = 0; i < OutFStaticMesh.MaterialSubsets.Num(); i++)
-        {
-            FString MatName = OutFStaticMesh.MaterialSubsets[i].MaterialName;
-            for (int32 j = 0; j < OutFStaticMesh.Materials.Num(); j++)
-            {
-                if (OutFStaticMesh.Materials[j].MTLName == MatName)
-                {
-                    OutFStaticMesh.MaterialSubsets[i].MaterialIndex = j;
-                    break;
-                }
-            }
-        }
-    }
-
-    static bool SaveStaticMeshToBinary(const FWString& FilePath, const OBJ::FStaticMeshRenderData& StaticMesh)
-    {
-        std::ofstream File(FilePath, std::ios::binary);
-        if (!File.is_open())
-        {
-            assert("CAN'T SAVE STATIC MESH BINARY FILE");
-            return false;
-        }
-
-        // Object Name
-        Serializer::WriteFWString(File, StaticMesh.ObjectName);
-
-        // Path Name
-        Serializer::WriteFWString(File, StaticMesh.PathName);
-
-        // Display Name
-        Serializer::WriteFString(File, StaticMesh.DisplayName);
-
-        // Vertices
-        uint32 VertexCount = StaticMesh.Vertices.Num();
-        File.write(reinterpret_cast<const char*>(&VertexCount), sizeof(VertexCount));
-        File.write(reinterpret_cast<const char*>(StaticMesh.Vertices.GetData()), VertexCount * sizeof(FVertexSimple));
-
-        // Indices
-        uint32 IndexCount = StaticMesh.Indices.Num();
-        File.write(reinterpret_cast<const char*>(&IndexCount), sizeof(IndexCount));
-        File.write(reinterpret_cast<const char*>(StaticMesh.Indices.GetData()), IndexCount * sizeof(UINT));
-
-        // Materials
-        uint32 MaterialCount = StaticMesh.Materials.Num();
-        File.write(reinterpret_cast<const char*>(&MaterialCount), sizeof(MaterialCount));
-        for (const FObjMaterialInfo& Material : StaticMesh.Materials)
-        {
-            Serializer::WriteFString(File, Material.MTLName);
-            File.write(reinterpret_cast<const char*>(&Material.bHasTexture), sizeof(Material.bHasTexture));
-            File.write(reinterpret_cast<const char*>(&Material.bTransparent), sizeof(Material.bTransparent));
-            File.write(reinterpret_cast<const char*>(&Material.Diffuse), sizeof(Material.Diffuse));
-            File.write(reinterpret_cast<const char*>(&Material.Specular), sizeof(Material.Specular));
-            File.write(reinterpret_cast<const char*>(&Material.Ambient), sizeof(Material.Ambient));
-            File.write(reinterpret_cast<const char*>(&Material.Emissive), sizeof(Material.Emissive));
-            File.write(reinterpret_cast<const char*>(&Material.SpecularScalar), sizeof(Material.SpecularScalar));
-            File.write(reinterpret_cast<const char*>(&Material.DensityScalar), sizeof(Material.DensityScalar));
-            File.write(reinterpret_cast<const char*>(&Material.TransparencyScalar), sizeof(Material.TransparencyScalar));
-            File.write(reinterpret_cast<const char*>(&Material.IlluminanceModel), sizeof(Material.IlluminanceModel));
-
-            Serializer::WriteFString(File, Material.DiffuseTextureName);
-            Serializer::WriteFWString(File, Material.DiffuseTexturePath);
-            Serializer::WriteFString(File, Material.AmbientTextureName);
-            Serializer::WriteFWString(File, Material.AmbientTexturePath);
-            Serializer::WriteFString(File, Material.SpecularTextureName);
-            Serializer::WriteFWString(File, Material.SpecularTexturePath);
-            Serializer::WriteFString(File, Material.BumpTextureName);
-            Serializer::WriteFWString(File, Material.BumpTexturePath);
-            Serializer::WriteFString(File, Material.AlphaTextureName);
-            Serializer::WriteFWString(File, Material.AlphaTexturePath);
-        }
-
-        // Material Subsets
-        uint32 SubsetCount = StaticMesh.MaterialSubsets.Num();
-        File.write(reinterpret_cast<const char*>(&SubsetCount), sizeof(SubsetCount));
-        for (const FMaterialSubset& Subset : StaticMesh.MaterialSubsets)
-        {
-            Serializer::WriteFString(File, Subset.MaterialName);
-            File.write(reinterpret_cast<const char*>(&Subset.IndexStart), sizeof(Subset.IndexStart));
-            File.write(reinterpret_cast<const char*>(&Subset.IndexCount), sizeof(Subset.IndexCount));
-            File.write(reinterpret_cast<const char*>(&Subset.MaterialIndex), sizeof(Subset.MaterialIndex));
-        }
-
-        // Bounding Box
-        File.write(reinterpret_cast<const char*>(&StaticMesh.BoundingBoxMin), sizeof(FVector));
-        File.write(reinterpret_cast<const char*>(&StaticMesh.BoundingBoxMax), sizeof(FVector));
-        
-        File.close();
-        return true;
-    }
-
-    static bool LoadStaticMeshFromBinary(const FWString& FilePath, OBJ::FStaticMeshRenderData& OutStaticMesh)
-    {
-        std::ifstream File(FilePath, std::ios::binary);
-        if (!File.is_open())
-        {
-            assert("CAN'T OPEN STATIC MESH BINARY FILE");
-            return false;
-        }
-
-        TArray<FWString> Textures;
-
-        // Object Name
-        Serializer::ReadFWString(File, OutStaticMesh.ObjectName);
-
-        // Path Name
-        Serializer::ReadFWString(File, OutStaticMesh.PathName);
-
-        // Display Name
-        Serializer::ReadFString(File, OutStaticMesh.DisplayName);
-
-        // Vertices
-        uint32 VertexCount = 0;
-        File.read(reinterpret_cast<char*>(&VertexCount), sizeof(VertexCount));
-        OutStaticMesh.Vertices.SetNum(VertexCount);
-        File.read(reinterpret_cast<char*>(OutStaticMesh.Vertices.GetData()), VertexCount * sizeof(FVertexSimple));
-
-        // Indices
-        uint32 IndexCount = 0;
-        File.read(reinterpret_cast<char*>(&IndexCount), sizeof(IndexCount));
-        OutStaticMesh.Indices.SetNum(IndexCount);
-        File.read(reinterpret_cast<char*>(OutStaticMesh.Indices.GetData()), IndexCount * sizeof(UINT));
-
-        // Material
-        uint32 MaterialCount = 0;
-        File.read(reinterpret_cast<char*>(&MaterialCount), sizeof(MaterialCount));
-        OutStaticMesh.Materials.SetNum(MaterialCount);
-        for (FObjMaterialInfo& Material : OutStaticMesh.Materials)
-        {
-            Serializer::ReadFString(File, Material.MTLName);
-            File.read(reinterpret_cast<char*>(&Material.bHasTexture), sizeof(Material.bHasTexture));
-            File.read(reinterpret_cast<char*>(&Material.bTransparent), sizeof(Material.bTransparent));
-            File.read(reinterpret_cast<char*>(&Material.Diffuse), sizeof(Material.Diffuse));
-            File.read(reinterpret_cast<char*>(&Material.Specular), sizeof(Material.Specular));
-            File.read(reinterpret_cast<char*>(&Material.Ambient), sizeof(Material.Ambient));
-            File.read(reinterpret_cast<char*>(&Material.Emissive), sizeof(Material.Emissive));
-            File.read(reinterpret_cast<char*>(&Material.SpecularScalar), sizeof(Material.SpecularScalar));
-            File.read(reinterpret_cast<char*>(&Material.DensityScalar), sizeof(Material.DensityScalar));
-            File.read(reinterpret_cast<char*>(&Material.TransparencyScalar), sizeof(Material.TransparencyScalar));
-            File.read(reinterpret_cast<char*>(&Material.IlluminanceModel), sizeof(Material.IlluminanceModel));
-            Serializer::ReadFString(File, Material.DiffuseTextureName);
-            Serializer::ReadFWString(File, Material.DiffuseTexturePath);
-            Serializer::ReadFString(File, Material.AmbientTextureName);
-            Serializer::ReadFWString(File, Material.AmbientTexturePath);
-            Serializer::ReadFString(File, Material.SpecularTextureName);
-            Serializer::ReadFWString(File, Material.SpecularTexturePath);
-            Serializer::ReadFString(File, Material.BumpTextureName);
-            Serializer::ReadFWString(File, Material.BumpTexturePath);
-            Serializer::ReadFString(File, Material.AlphaTextureName);
-            Serializer::ReadFWString(File, Material.AlphaTexturePath);
-
-            if (!Material.DiffuseTexturePath.empty())
-            {
-                Textures.AddUnique(Material.DiffuseTexturePath);
-            }
-            if (!Material.AmbientTexturePath.empty())
-            {
-                Textures.AddUnique(Material.AmbientTexturePath);
-            }
-            if (!Material.SpecularTexturePath.empty())
-            {
-                Textures.AddUnique(Material.SpecularTexturePath);
-            }
-            if (!Material.BumpTexturePath.empty())
-            {
-                Textures.AddUnique(Material.BumpTexturePath);
-            }
-            if (!Material.AlphaTexturePath.empty())
-            {
-                Textures.AddUnique(Material.AlphaTexturePath);
-            }
-        }
-
-        // Material Subset
-        uint32 SubsetCount = 0;
-        File.read(reinterpret_cast<char*>(&SubsetCount), sizeof(SubsetCount));
-        OutStaticMesh.MaterialSubsets.SetNum(SubsetCount);
-        for (FMaterialSubset& Subset : OutStaticMesh.MaterialSubsets)
-        {
-            Serializer::ReadFString(File, Subset.MaterialName);
-            File.read(reinterpret_cast<char*>(&Subset.IndexStart), sizeof(Subset.IndexStart));
-            File.read(reinterpret_cast<char*>(&Subset.IndexCount), sizeof(Subset.IndexCount));
-            File.read(reinterpret_cast<char*>(&Subset.MaterialIndex), sizeof(Subset.MaterialIndex));
-        }
-
-        // Bounding Box
-        File.read(reinterpret_cast<char*>(&OutStaticMesh.BoundingBoxMin), sizeof(FVector));
-        File.read(reinterpret_cast<char*>(&OutStaticMesh.BoundingBoxMax), sizeof(FVector));
-        
-        File.close();
-
-        // Texture Load
-        if (Textures.Num() > 0)
-        {
-            for (const FWString& Texture : Textures)
-            {
-                if (FEngineLoop::resourceMgr.GetTexture(Texture) == nullptr)
-                {
-                    FEngineLoop::resourceMgr.LoadTextureFromFile(FEngineLoop::graphicDevice.Device, FEngineLoop::graphicDevice.DeviceContext, Texture.c_str());
-                }
-            }
-        }
-        
-        return true;
-    }
+    static bool LoadStaticMeshFromBinary(const FWString& FilePath, OBJ::FStaticMeshRenderData& OutStaticMesh);
 
     static UMaterial* CreateMaterial(FObjMaterialInfo materialInfo);
     static TMap<FString, UMaterial*>& GetMaterials() { return materialMap; }
@@ -702,4 +444,106 @@ private:
     inline static TMap<FString, OBJ::FStaticMeshRenderData*> ObjStaticMeshMap;
     inline static TMap<FWString, UStaticMesh*> staticMeshMap;
     inline static TMap<FString, UMaterial*> materialMap;
+};
+
+
+
+struct Quadric {
+    float data[10] = {0};
+
+    void Add(const Quadric& q) {
+        for (int i = 0; i < 10; i++) data[i] += q.data[i];
+    }
+};
+
+struct EdgeCollapse {
+    int v1, v2;
+    float cost;
+    FVector newPos;
+
+    bool operator<(const EdgeCollapse& other) const {
+        return cost > other.cost; // 최소 힙을 위해 부등호 반대로 설정
+    }
+};
+
+class QEMSimplifier {
+public:
+    static void Simplify(FObjInfo& obj, int targetVertexCount) {
+        int numVertices = obj.Vertices.Num();
+        int numFaces = obj.VertexIndices.Num() / 3;
+
+        // 1. 각 정점에 대한 QEM 행렬 계산
+        std::vector<Quadric> quadrics(numVertices);
+        for (int i = 0; i < numFaces; i++) {
+            int v0 = obj.VertexIndices[i * 3 + 0];
+            int v1 = obj.VertexIndices[i * 3 + 1];
+            int v2 = obj.VertexIndices[i * 3 + 2];
+            
+            FVector p0 = obj.Vertices[v0];
+            FVector p1 = obj.Vertices[v1];
+            FVector p2 = obj.Vertices[v2];
+            
+            FVector normal = (p1 - p0).Cross(p2 - p0).Normalize();
+            float d = -normal.Dot(p0);
+            
+            Quadric q;
+            q.data[0] = normal.x * normal.x;
+            q.data[1] = normal.x * normal.y;
+            q.data[2] = normal.x * normal.z;
+            q.data[3] = normal.x * d;
+            q.data[4] = normal.y * normal.y;
+            q.data[5] = normal.y * normal.z;
+            q.data[6] = normal.y * d;
+            q.data[7] = normal.z * normal.z;
+            q.data[8] = normal.z * d;
+            q.data[9] = d * d;
+            
+            quadrics[v0].Add(q);
+            quadrics[v1].Add(q);
+            quadrics[v2].Add(q);
+        }
+
+        // 2. 엣지 콜랩스를 위한 우선순위 큐 생성
+        std::priority_queue<EdgeCollapse> collapseQueue;
+        for (int i = 0; i < numVertices; i++) {
+            for (int j = i + 1; j < numVertices; j++) {
+                FVector midpoint = (obj.Vertices[i] + obj.Vertices[j]) * 0.5f;
+                float cost = ComputeCollapseCost(quadrics[i], quadrics[j], midpoint);
+                collapseQueue.push({i, j, cost, midpoint});
+            }
+        }
+
+        // 3. 목표 정점 개수까지 단순화 수행
+        while (obj.Vertices.Num() > targetVertexCount && !collapseQueue.empty()) {
+            EdgeCollapse bestCollapse = collapseQueue.top();
+            collapseQueue.pop();
+            
+            int v1 = bestCollapse.v1;
+            int v2 = bestCollapse.v2;
+            
+            obj.Vertices[v1] = bestCollapse.newPos;
+            
+            quadrics[v1].Add(quadrics[v2]);
+            quadrics[v2] = quadrics[v1];
+            
+            // 정점 삭제
+            obj.Vertices.RemoveAt(v2);
+            obj.Normals.RemoveAt(v2);
+            obj.UVs.RemoveAt(v2);
+            
+            // 인덱스 재매핑
+            for (uint32& index : obj.VertexIndices) {
+                if (index == v2) index = v1;
+                if (index > v2) index--;
+            }
+        }
+    }
+
+private:
+    static float ComputeCollapseCost(const Quadric& q1, const Quadric& q2, FVector& newPos) {
+        Quadric q = q1;
+        q.Add(q2);
+        
+        return q.data[9]; // 단순히 d*d 값 활용 (더 정교한 방법 가능)
+    }
 };
