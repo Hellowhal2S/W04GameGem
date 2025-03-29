@@ -245,11 +245,8 @@ void FOctreeNode::BuildBatchRenderData()
                 UINT oldIndex = MeshIndices[Subset.IndexStart + j];
                 if (!IndexMap.Contains(oldIndex))
                 {
-                    FVertexCompact TransformedVertex = ConvertToCompact(MeshVertices[oldIndex]);
-                    FVertexSimple Vertex = MeshVertices[oldIndex];
-                    std::ostringstream oss;
-                    oss << Vertex.x << " " << Vertex.y << " " << Vertex.z << " " << Vertex.u << " " << Vertex.v;
-                    std::string Str = oss.str();
+                    //FVertexCompact TransformedVertex = ConvertToCompact(MeshVertices[oldIndex]);
+                    FVertexCompact TransformedVertex=MeshVertices[oldIndex];
                     // 월드 위치 변환
                     FVector LocalPosition{TransformedVertex.x, TransformedVertex.y, TransformedVertex.z};
                     FVector WorldPosition = ModelMatrix.TransformPosition(LocalPosition);

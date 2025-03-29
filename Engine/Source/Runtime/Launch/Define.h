@@ -181,7 +181,7 @@ namespace OBJ
         FWString PathName;
         FString DisplayName;
         
-        TArray<FVertexSimple> Vertices;
+        TArray<FVertexCompact> Vertices;
         TArray<UINT> Indices;
 
         ID3D11Buffer* VertexBuffer;

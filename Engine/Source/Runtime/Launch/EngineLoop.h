@@ -44,7 +44,7 @@ private:
     SLevelEditor* LevelEditor;
     UnrealEd* UnrealEditor;
     bool bIsExit = false;
-    const int32 targetFPS = 60;
+    const int32 targetFPS = 240;
     bool bTestInput = false;
 
 public:

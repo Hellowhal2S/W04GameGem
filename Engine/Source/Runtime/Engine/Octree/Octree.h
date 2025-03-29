@@ -55,7 +55,7 @@ public:
     );
 };
 inline int GRenderDepthMin = 1;  // 최소 깊이 (이보다 얕으면 스킵)
-inline int GRenderDepthMax = 4;  // 최대 깊이 (이보다 깊으면 스킵)
+inline int GRenderDepthMax = 2;  // 최대 깊이 (이보다 깊으면 스킵)
 class FOctree
 {
 public:

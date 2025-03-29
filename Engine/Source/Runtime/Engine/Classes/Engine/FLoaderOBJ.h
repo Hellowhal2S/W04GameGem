@@ -331,7 +331,7 @@ struct FLoaderOBJ
             uint32 index;
             if (vertexMap.Find(key) == nullptr)
             {
-                FVertexSimple vertex {};
+                FVertexCompact vertex {};
                 vertex.x = RawData.Vertices[vIdx].x;
                 vertex.y = RawData.Vertices[vIdx].y;
                 vertex.z = RawData.Vertices[vIdx].z;
@@ -340,17 +340,25 @@ struct FLoaderOBJ
 
                 if (tIdx != UINT32_MAX && tIdx < RawData.UVs.Num())
                 {
-                    vertex.u = RawData.UVs[tIdx].x;
-                    vertex.v = -RawData.UVs[tIdx].y;
-                }
+                    float u = RawData.UVs[tIdx].x;
+                    float v = -RawData.UVs[tIdx].y;
+                    
+                    u = u * 0.5f + 0.5f;
+                    v = v * 0.5f + 0.5f;
+                    vertex.u = static_cast<uint16>(FMath::Clamp(u, 0.0f, 1.0f) * 65535.0f + 0.5f);
+                    vertex.v = static_cast<uint16>(FMath::Clamp(v, 0.0f, 1.0f) * 65535.0f + 0.5f);
 
+                    
+                }
+/*
                 if (nIdx != UINT32_MAX && nIdx < RawData.Normals.Num())
                 {
                     vertex.nx = RawData.Normals[nIdx].x;
                     vertex.ny = RawData.Normals[nIdx].y;
                     vertex.nz = RawData.Normals[nIdx].z;
                 }
-
+*/
+                /*
                 for (int32 j = 0; j < OutStaticMesh.MaterialSubsets.Num(); j++)
                 {
                     const FMaterialSubset& subset = OutStaticMesh.MaterialSubsets[j];
@@ -360,6 +368,7 @@ struct FLoaderOBJ
                         break;
                     }
                 }
+                */
                 
                 index = OutStaticMesh.Vertices.Num();
                 OutStaticMesh.Vertices.Add(vertex);
@@ -398,7 +407,7 @@ struct FLoaderOBJ
         return true;
     }
     
-    static void ComputeBoundingBox(const TArray<FVertexSimple>& InVertices, FVector& OutMinVector, FVector& OutMaxVector)
+    static void ComputeBoundingBox(const TArray<FVertexCompact>& InVertices, FVector& OutMinVector, FVector& OutMaxVector)
     {
         FVector MinVector = { FLT_MAX, FLT_MAX, FLT_MAX };
         FVector MaxVector = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
@@ -433,12 +442,12 @@ public:
         
         FWString BinaryPath = (PathFileName + ".bin").ToWideString();
         if (std::ifstream(BinaryPath).good())
-        {
+        {/*
             if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
             {
                 ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
                 return NewStaticMesh;
-            }
+            }*/
         }
         
         // Parse OBJ
@@ -519,7 +528,7 @@ public:
         // Vertices
         uint32 VertexCount = StaticMesh.Vertices.Num();
         File.write(reinterpret_cast<const char*>(&VertexCount), sizeof(VertexCount));
-        File.write(reinterpret_cast<const char*>(StaticMesh.Vertices.GetData()), VertexCount * sizeof(FVertexSimple));
+        File.write(reinterpret_cast<const char*>(StaticMesh.Vertices.GetData()), VertexCount * sizeof(FVertexCompact));
 
         // Indices
         uint32 IndexCount = StaticMesh.Indices.Num();
@@ -598,7 +607,7 @@ public:
         uint32 VertexCount = 0;
         File.read(reinterpret_cast<char*>(&VertexCount), sizeof(VertexCount));
         OutStaticMesh.Vertices.SetNum(VertexCount);
-        File.read(reinterpret_cast<char*>(OutStaticMesh.Vertices.GetData()), VertexCount * sizeof(FVertexSimple));
+        File.read(reinterpret_cast<char*>(OutStaticMesh.Vertices.GetData()), VertexCount * sizeof(FVertexCompact));
 
         // Indices
         uint32 IndexCount = 0;
