@@ -28,8 +28,12 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     wchar_t buffer[256];  // 메시지를 저장할 버퍼
     swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
     MessageBox(nullptr, buffer, L"오류", MB_OK);
-    QEMSimplifier::Simplify(NewObjInfo, NewObjInfo.Vertices.Num() * 0.5);
+    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.VertexIndices.Num());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
+    QEMSimplifier::Simplify(NewObjInfo, NewObjInfo.Vertices.Num() * 0.999);
     swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
+    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.VertexIndices.Num());
     MessageBox(nullptr, buffer, L"오류", MB_OK);
 
     if (!Result)

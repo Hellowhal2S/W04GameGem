@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include <queue>
+#include <set>
 #include <sstream>
 
 #include "Define.h"
@@ -455,7 +456,7 @@ private:
     inline static TMap<FString, UMaterial*> materialMap;
 };
 
-
+// Quadric 에러 행렬 (대칭행렬의 10개 요소만 저장)
 struct Quadric {
     float data[10] = {0};
 
@@ -473,17 +474,30 @@ struct EdgeCollapse {
     FVector newPos;
 
     bool operator<(const EdgeCollapse& other) const {
-        // 최소 힙을 위해 cost가 낮은 엣지가 우선하도록 비교
-        return cost > other.cost;
+        return cost > other.cost; // 최소 힙: 낮은 cost 우선
     }
 };
 
-// 병합 가능한지 여부를 결정하는 함수 (위치, 노말, UV 모두 고려)
-// 임계값은 상황에 맞게 조정할 수 있습니다.
+
+// 병합 가능한지 여부를 결정하는 함수 (위치와 UV만 고려)
+// 임계값은 상황에 맞게 조정
+static bool CanMerge(const FVector& pos1, const FVector& pos2,
+                     const FVector2D& uv1, const FVector2D& uv2,
+                     float posThreshold = 0.1f,
+                     float uvThreshold = 1.0f)
+{
+    if ((pos1 - pos2).Magnitude() > posThreshold)
+        return false;
+    
+    if (std::abs(uv1.x - uv2.x) > uvThreshold || std::abs(uv1.y - uv2.y) > uvThreshold)
+        return false;
+    
+    return true;
+}
 
 class QEMSimplifier {
 public:
-    // targetVertexCount까지 단순화 (예제에서는 모든 정점 쌍을 검사하는 비효율적 방법)
+    // targetVertexCount까지 단순화 (예제에서는 면 정보를 이용하여 인접 정점만 후보로 처리)
     static void Simplify(FObjInfo& obj, int targetVertexCount) {
         int numVertices = obj.Vertices.Num();
         int numFaces = obj.VertexIndices.Num() / 3;
@@ -499,7 +513,6 @@ public:
             FVector p1 = obj.Vertices[v1];
             FVector p2 = obj.Vertices[v2];
             
-            // 면의 법선 계산 (정규화)
             FVector normal = (p1 - p0).Cross(p2 - p0).Normalize();
             float d = -normal.Dot(p0);
             
@@ -520,27 +533,59 @@ public:
             quadrics[v2].Add(q);
         }
 
-        // 2. 병합 가능한 정점 쌍에 대해서만 엣지 축소 후보를 우선순위 큐에 추가
-        std::priority_queue<EdgeCollapse> collapseQueue;
-        for (int i = 0; i < numVertices; i++) {
-            for (int j = i + 1; j < numVertices; j++) {
-                // 두 정점의 노말 및 UV도 고려하여 병합 가능한 경우에만 처리
-                if (!CanMerge(obj.Vertices[i], obj.Vertices[j],
-                              obj.UVs[i], obj.UVs[j]))
-                {
-                    continue;
-                }
-                FVector midpoint = (obj.Vertices[i] + obj.Vertices[j]) * 0.5f;
-                float cost = ComputeCollapseCost(quadrics[i], quadrics[j], midpoint);
-                collapseQueue.push({i, j, cost, midpoint});
+        // 2. 면 정보로부터 실제로 연결된 엣지 후보 목록을 생성합니다.
+        // 각 면의 엣지 (v0-v1, v1-v2, v2-v0)만 고려합니다.
+        std::set<std::pair< int, int>> edgeSet;
+        for (int i = 0; i < numFaces; i++) {
+            uint32 first = obj.VertexIndices[i * 3 + 0];
+            uint32 second = obj.VertexIndices[i * 3 + 1];
+            uint32 third = obj.VertexIndices[i * 3 + 2];
+            if (first == second || first == third || second == third)
+            {
+                obj.VertexIndices.RemoveAt((i*3+2));
+                obj.VertexIndices.RemoveAt(i*3 + 1);
+                obj.VertexIndices.RemoveAt(i*3);
+                i--;
+                continue;
+            }
+                uint32 v[3] = { obj.VertexIndices[i * 3 + 0],
+                         obj.VertexIndices[i * 3 + 1],
+                         obj.VertexIndices[i * 3 + 2] };
+            // 정렬하여 (min, max) 쌍으로 저장
+            for (int j = 0; j < 3; j++) {
+                int a = v[j], b = v[(j+1)%3];
+                if (a > b) std::swap(a, b);
+                edgeSet.insert({a, b});
             }
         }
+        
+        // 3. 후보 엣지들을 우선순위 큐에 추가 (병합 가능한지 검사)
+        std::priority_queue<EdgeCollapse> collapseQueue;
+        for (const auto& edge : edgeSet) {
+ 
+            // UE_LOG(LogLevel::Warning, "Edge %d  %dLength: %f", edge.first, edge.second, (FVector(obj.Vertices[edge.first].x, obj.Vertices[edge.first].y, obj.Vertices[edge.first].z) -
+            // FVector(obj.Vertices[edge.second].x, obj.Vertices[edge.second].y,obj.Vertices[edge.second].z)).Magnitude());
+            int i = edge.first, j = edge.second;
+            if (!CanMerge(obj.Vertices[i], obj.Vertices[j],
+                          obj.UVs[i], obj.UVs[j]))
+            {
+                continue;
+            }
+            FVector midpoint = (obj.Vertices[i] + obj.Vertices[j]) * 0.5f;
+            float cost = ComputeCollapseCost(quadrics[i], quadrics[j], midpoint);
+            collapseQueue.push({i, j, cost, midpoint});
+        }
 
-        // 3. 목표 정점 개수까지 단순화 수행
+        // 4. 목표 정점 개수까지 단순화 수행
         while (obj.Vertices.Num() > (size_t)targetVertexCount && !collapseQueue.empty()) {
             EdgeCollapse bestCollapse = collapseQueue.top();
             collapseQueue.pop();
-            
+        //     wchar_t buffer[256];  // 메시지를 저장할 버퍼
+        //     swprintf_s(buffer, L"Edge %d  %dLength: %f", bestCollapse.v1, bestCollapse.v2, (FVector(obj.Vertices[bestCollapse.v1].x, obj.Vertices[ bestCollapse.v1].y, obj.Vertices[ bestCollapse.v1].z) -
+        // FVector(obj.Vertices[ bestCollapse.v2].x, obj.Vertices[ bestCollapse.v2].y,obj.Vertices[ bestCollapse.v2].z)).Magnitude());
+        //     MessageBox(nullptr, buffer, L"오류", MB_OK);
+        //     swprintf_s(buffer, L"Cost %f ",bestCollapse.cost);
+        //     MessageBox(nullptr, buffer, L"오류", MB_OK);
             int v1 = bestCollapse.v1;
             int v2 = bestCollapse.v2;
             
@@ -548,20 +593,31 @@ public:
             if (v1 >= obj.Vertices.Num() || v2 >= obj.Vertices.Num())
                 continue;
             
-            // 병합: v1에 v2를 병합
+            // 병합 전 원래 v1과 v2의 위치와 UV 기록
+            FVector oldPos_v1 = obj.Vertices[v1];
+            FVector oldPos_v2 = obj.Vertices[v2];
+            FVector2D uv_v1 = obj.UVs[v1];
+            FVector2D uv_v2 = obj.UVs[v2];
+            
+            // 병합: v1에 v2를 병합하여 v1의 위치를 bestCollapse.newPos로 갱신
             obj.Vertices[v1] = bestCollapse.newPos;
-            // 노말과 UV는 단순 평균 (노말은 정규화 처리)
+            // 노말은 평균내고 정규화
             obj.Normals[v1] = (obj.Normals[v1] + obj.Normals[v2]) * 0.5f;
             obj.Normals[v1] = obj.Normals[v1].Normalize();
-            // obj.UVs[v1] = (obj.UVs[v1] + obj.UVs[v2]) * 0.5f;
-            obj.UVs[v1] = (obj.UVs[v1] + obj.UVs[v2]) * 0.5f;
-
             
+            // UV 보정: v1에서 v2까지의 거리와 새 위치의 이동량을 기준으로 t 계산
+            float totalDist = (oldPos_v2 - oldPos_v1).Magnitude();
+            float movedDist = (bestCollapse.newPos - oldPos_v1).Magnitude();
+            float t = (totalDist > 1e-6f) ? (movedDist / totalDist) : 0.5f;
+            // 선형 보간을 통해 새 UV 결정
+            // obj.UVs[v1] =  FVector2D::Lerp(uv_v1, uv_v2, t);
+            // obj.UVs[v1] =  uv_v2;
+
             // QEM 업데이트: v1의 QEM에 v2의 QEM을 추가
             quadrics[v1].Add(quadrics[v2]);
             quadrics[v2] = quadrics[v1];
             
-            // 정점 삭제: v2 정점을 제거하면, 인덱스 값이 변경되므로 재매핑 필요
+            // 정점 삭제: v2 정점을 제거 (삭제 후 인덱스 재매핑 필요)
             obj.Vertices.RemoveAt(v2);
             obj.Normals.RemoveAt(v2);
             obj.UVs.RemoveAt(v2);
@@ -571,29 +627,233 @@ public:
                 if (index == v2) index = v1;
                 else if (index > v2) index--;
             }
+            for (auto& index : obj.NormalIndices) {
+                if (index == v2) index = v1;
+                else if (index > v2) index--;
+            }
+            for (auto& index : obj.TextureIndices) {
+                if (index == v2) index = v1;
+                else if (index > v2) index--;
+            }
+
+
+            edgeSet.clear();
+            quadrics.clear();
+            collapseQueue = std::priority_queue<EdgeCollapse>();
+            std::set<uint32> removeSet;
+            for (int i = 0; i < numFaces; i++) {
+                uint32 tmp = obj.VertexIndices.Num();
+                uint32 first = obj.VertexIndices[i * 3 + 0];
+                uint32 second = obj.VertexIndices[i * 3 + 1];
+                uint32 third = obj.VertexIndices[i * 3 + 2];
+                if (first == second || first == third || second == third)
+                {
+
+                    obj.VertexIndices.RemoveAt((i*3+2));
+                    obj.VertexIndices.RemoveAt(i*3+1);
+                    obj.VertexIndices.RemoveAt(i*3);
+                    // removeSet.insert(i * 3 + 0);
+                    // removeSet.insert(i * 3 + 1);
+                    // removeSet.insert(i * 3 + 2);
+                    numFaces--;
+                    i--;
+                    continue;
+                }
+                uint32 v[3] = { first, second, third};
+                // 정렬하여 (min, max) 쌍으로 저장
+                for (int j = 0; j < 3; j++) {
+                    int a = v[j], b = v[(j+1)%3];
+                    if (a > b) std::swap(a, b);
+                    edgeSet.insert({a, b});
+                }
+            }
+            // std::vector<uint32> vec;
+            // for (auto iter : removeSet)
+            // {
+            //      vec.push_back(iter);
+            // }
+            // std::sort(vec.begin(), vec.end(),std::greater<uint32>());
+            // for (auto iter : vec)
+            // {
+            //     obj.VertexIndices.RemoveAt(iter);
+            // }
+            numVertices = obj.Vertices.Num();
+            numFaces = obj.VertexIndices.Num() / 3;
+            quadrics.resize(numVertices);
+            for (int i = 0; i < numFaces; i++) {
+                int v0 = obj.VertexIndices[i * 3 + 0];
+                int v1 = obj.VertexIndices[i * 3 + 1];
+                int v2 = obj.VertexIndices[i * 3 + 2];
+                
+                FVector p0 = obj.Vertices[v0];
+                FVector p1 = obj.Vertices[v1];
+                FVector p2 = obj.Vertices[v2];
+                
+                FVector normal = (p1 - p0).Cross(p2 - p0).Normalize();
+                float d = -normal.Dot(p0);
+                
+                Quadric q;
+                q.data[0] = normal.x * normal.x;
+                q.data[1] = normal.x * normal.y;
+                q.data[2] = normal.x * normal.z;
+                q.data[3] = normal.x * d;
+                q.data[4] = normal.y * normal.y;
+                q.data[5] = normal.y * normal.z;
+                q.data[6] = normal.y * d;
+                q.data[7] = normal.z * normal.z;
+                q.data[8] = normal.z * d;
+                q.data[9] = d * d;
+                
+                quadrics[v0].Add(q);
+                quadrics[v1].Add(q);
+                quadrics[v2].Add(q);
+            }
+            for (const auto& edge : edgeSet) {
+                int i = edge.first, j = edge.second;
+                if (!CanMerge(obj.Vertices[i], obj.Vertices[j],
+                              obj.UVs[i], obj.UVs[j]))
+                {
+                    continue;
+                }
+                FVector midpoint = (obj.Vertices[i] + obj.Vertices[j]) * 0.5f;
+                float cost = ComputeCollapseCost(quadrics[i], quadrics[j], midpoint);
+                collapseQueue.push({i, j, cost, midpoint});
+            }
+
         }
+        
     }
 
+    static void Simplify2(FObjInfo& obj, int targetVertexCount) {
+        int numVertices = obj.Vertices.Num();
+        int numFaces = obj.VertexIndices.Num() / 3;
+
+        // 1. 각 정점에 대한 QEM 행렬 계산 (각 정점에 인접한 삼각형 면들로부터)
+        std::vector<Quadric> quadrics(numVertices);
+        for (int i = 0; i < numFaces; i++) {
+            int v0 = obj.VertexIndices[i * 3 + 0];
+            int v1 = obj.VertexIndices[i * 3 + 1];
+            int v2 = obj.VertexIndices[i * 3 + 2];
+            
+            FVector p0 = obj.Vertices[v0];
+            FVector p1 = obj.Vertices[v1];
+            FVector p2 = obj.Vertices[v2];
+            
+            FVector normal = (p1 - p0).Cross(p2 - p0).Normalize();
+            float d = -normal.Dot(p0);
+            
+            Quadric q;
+            q.data[0] = normal.x * normal.x;
+            q.data[1] = normal.x * normal.y;
+            q.data[2] = normal.x * normal.z;
+            q.data[3] = normal.x * d;
+            q.data[4] = normal.y * normal.y;
+            q.data[5] = normal.y * normal.z;
+            q.data[6] = normal.y * d;
+            q.data[7] = normal.z * normal.z;
+            q.data[8] = normal.z * d;
+            q.data[9] = d * d;
+            
+            quadrics[v0].Add(q);
+            quadrics[v1].Add(q);
+            quadrics[v2].Add(q);
+        }
+
+        // 2. 면 정보로부터 실제로 연결된 엣지 후보 목록을 생성합니다.
+        // 각 면의 엣지 (v0-v1, v1-v2, v2-v0)만 고려합니다.
+        std::set<std::pair< int, int>> edgeSet;
+        for (int i = 0; i < numFaces; i++) {
+            uint32 v[3] = { obj.VertexIndices[i * 3 + 0],
+                         obj.VertexIndices[i * 3 + 1],
+                         obj.VertexIndices[i * 3 + 2] };
+            // 정렬하여 (min, max) 쌍으로 저장
+            for (int j = 0; j < 3; j++) {
+                int a = v[j], b = v[(j+1)%3];
+                if (a > b) std::swap(a, b);
+                edgeSet.insert({a, b});
+            }
+        }
+        
+        // 3. 후보 엣지들을 우선순위 큐에 추가 (병합 가능한지 검사)
+        std::priority_queue<EdgeCollapse> collapseQueue;
+        for (const auto& edge : edgeSet) {
+            int i = edge.first, j = edge.second;
+            if (!CanMerge(obj.Vertices[i], obj.Vertices[j],
+                          obj.UVs[i], obj.UVs[j]))
+            {
+                continue;
+            }
+            FVector midpoint = (obj.Vertices[i] + obj.Vertices[j]) * 0.5f;
+            float cost = ComputeCollapseCost(quadrics[i], quadrics[j], midpoint);
+            collapseQueue.push({i, j, cost, midpoint});
+        }
+
+        // 4. 목표 정점 개수까지 단순화 수행
+        while (obj.Vertices.Num() > (size_t)targetVertexCount && !collapseQueue.empty()) {
+            EdgeCollapse bestCollapse = collapseQueue.top();
+            collapseQueue.pop();
+            wchar_t buffer[256];  // 메시지를 저장할 버퍼
+            swprintf_s(buffer, L"Edge %d  %dLength: %f", bestCollapse.v1, bestCollapse.v2, (FVector(obj.Vertices[bestCollapse.v1].x, obj.Vertices[ bestCollapse.v1].y, obj.Vertices[ bestCollapse.v1].z) -
+        FVector(obj.Vertices[ bestCollapse.v2].x, obj.Vertices[ bestCollapse.v2].y,obj.Vertices[ bestCollapse.v2].z)).Magnitude());
+            MessageBox(nullptr, buffer, L"오류", MB_OK);
+            swprintf_s(buffer, L"Cost %f ",bestCollapse.cost);
+            MessageBox(nullptr, buffer, L"오류", MB_OK);
+            int v1 = bestCollapse.v1;
+            int v2 = bestCollapse.v2;
+            
+            // 이미 삭제된 정점이면 건너뜁니다.
+            if (v1 >= obj.Vertices.Num() || v2 >= obj.Vertices.Num())
+                continue;
+            
+            // 병합 전 원래 v1과 v2의 위치와 UV 기록
+            FVector oldPos_v1 = obj.Vertices[v1];
+            FVector oldPos_v2 = obj.Vertices[v2];
+            FVector2D uv_v1 = obj.UVs[v1];
+            FVector2D uv_v2 = obj.UVs[v2];
+            
+            // 병합: v1에 v2를 병합하여 v1의 위치를 bestCollapse.newPos로 갱신
+            obj.Vertices[v1] = bestCollapse.newPos;
+            // 노말은 평균내고 정규화
+            obj.Normals[v1] = (obj.Normals[v1] + obj.Normals[v2]) * 0.5f;
+            obj.Normals[v1] = obj.Normals[v1].Normalize();
+            
+            // UV 보정: v1에서 v2까지의 거리와 새 위치의 이동량을 기준으로 t 계산
+            float totalDist = (oldPos_v2 - oldPos_v1).Magnitude();
+            float movedDist = (bestCollapse.newPos - oldPos_v1).Magnitude();
+            float t = (totalDist > 1e-6f) ? (movedDist / totalDist) : 0.5f;
+            // 선형 보간을 통해 새 UV 결정
+            obj.UVs[v1] = FVector2D::Lerp(uv_v1, uv_v2, t);
+            
+            // QEM 업데이트: v1의 QEM에 v2의 QEM을 추가
+            quadrics[v1].Add(quadrics[v2]);
+            quadrics[v2] = quadrics[v1];
+            
+            // 정점 삭제: v2 정점을 제거 (삭제 후 인덱스 재매핑 필요)
+            obj.Vertices.RemoveAt(v2);
+            obj.Normals.RemoveAt(v2);
+            obj.UVs.RemoveAt(v2);
+            
+            // 인덱스 재매핑: 삭제된 정점 v2에 해당하는 인덱스는 v1로, v2보다 큰 인덱스는 1씩 감소
+            for (auto& index : obj.VertexIndices) {
+                if (index == v2) index = v1;
+                else if (index > v2) index--;
+            }
+            for (auto& index : obj.NormalIndices) {
+                if (index == v2) index = v1;
+                else if (index > v2) index--;
+            }
+            for (auto& index : obj.TextureIndices) {
+                if (index == v2) index = v1;
+                else if (index > v2) index--;
+            }
+        }
+    }
 private:
     // 간단한 엣지 축소 비용 계산 함수
-    // 실제 구현에서는 newPos^T * q * newPos 를 계산하는 방법이 더 정확하지만, 여기서는 q.data[9] 값을 사용합니다.
+    // 실제 구현에서는 newPos^T * q * newPos 를 계산하는 방식이 더 정확하지만, 여기서는 q.data[9]를 사용합니다.
     static float ComputeCollapseCost(const Quadric& q1, const Quadric& q2, FVector& newPos) {
         Quadric q = q1;
         q.Add(q2);
         return q.data[9];
     }
-    static bool CanMerge(const FVector& pos1, const FVector& pos2,
-              const FVector2D& uv1, const FVector2D& uv2,
-              float posThreshold = .01f,
-              float uvThreshold = 100.0f)
-    {
-        if ((pos1 - pos2).Magnitude() > posThreshold)
-            return false;
-        
-        if (std::abs(uv1.x - uv2.y) > uvThreshold || std::abs(uv1.y - uv2.y) > uvThreshold)
-            return false;
-    
-        return true;
-    }
-
 };

@@ -239,8 +239,8 @@ void FOctreeNode::BuildBatchRenderData()
 
             UINT VertexStart = (UINT)Entry.Vertices.Num();
             TMap<UINT, UINT> IndexMap;
-
-            for (UINT j = 0; j < Subset.IndexCount; ++j)
+            for (UINT j = 0; j < MeshIndices.Num() ; ++j)
+            // for (UINT j = 0; j < Subset.IndexCount; ++j)
             {
                 UINT oldIndex = MeshIndices[Subset.IndexStart + j];
                 if (!IndexMap.Contains(oldIndex))
@@ -369,8 +369,8 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
     {
         if (Depth >= GRenderDepthMin)
         {
-            UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
-                   Depth, CachedBatchData.Num());
+            // UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
+                   // Depth, CachedBatchData.Num());
 
             for (auto& Pair : CachedBatchData) // ← 수정: const 제거
             {
