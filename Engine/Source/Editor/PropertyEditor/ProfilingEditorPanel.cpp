@@ -1,6 +1,6 @@
 #include "ProfilingEditorPanel.h"
 
-#include "Container/Octree.h"
+#include "Engine/Octree/Octree.h"
 #include "Container/String.h"
 #include "ImGUI/imgui.h"
 #include "Profiling/PlatformTime.h"

@@ -177,7 +177,6 @@
     <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\NameTypes.cpp" />
     <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectArray.cpp" />
     <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectHash.cpp" />
-    <ClCompile Include="Engine\Source\Runtime\Core\Container\Octree.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Container\String.cpp" />
     <ClCompile Include="Engine\Source\Editor\PropertyEditor\ControlEditorPanel.cpp" />
     <ClCompile Include="Engine\Source\Editor\PropertyEditor\OutlinerEditorPanel.cpp" />
@@ -195,6 +194,84 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\ActorComponent.cpp" />
     <ClCompile Include="Engine\Source\Editor\UnrealEd\EditorViewportClient.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Octree\Octree.cpp">
+      <AssemblerOutput>NoListing</AssemblerOutput>
+      <AssemblerListingLocation>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</AssemblerListingLocation>
+      <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
+      <BrowseInformation>false</BrowseInformation>
+      <BrowseInformationFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</BrowseInformationFile>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <CompileAs>Default</CompileAs>
+      <ConformanceMode>true</ConformanceMode>
+      <DiagnosticsFormat>Column</DiagnosticsFormat>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <ExpandAttributedSource>false</ExpandAttributedSource>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <EnableASAN>false</EnableASAN>
+      <EnableFuzzer>false</EnableFuzzer>
+      <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <GenerateModuleDependencies>false</GenerateModuleDependencies>
+      <GenerateSourceDependencies>false</GenerateSourceDependencies>
+      <GenerateXMLDocumentationFiles>false</GenerateXMLDocumentationFiles>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <MinimalRebuild>false</MinimalRebuild>
+      <ModuleDependenciesFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</ModuleDependenciesFile>
+      <ModuleOutputFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</ModuleOutputFile>
+      <OmitDefaultLibName>false</OmitDefaultLibName>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <Optimization>MaxSpeed</Optimization>
+      <ObjectFileName>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</ObjectFileName>
+      <CallingConvention>Cdecl</CallingConvention>
+      <ProgramDataBaseFileName>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\vc143.pdb</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.pch</PrecompiledHeaderOutputFile>
+      <PreprocessToFile>false</PreprocessToFile>
+      <PreprocessKeepComments>false</PreprocessKeepComments>
+      <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDll</RuntimeLibrary>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+      <ShowIncludes>false</ShowIncludes>
+      <SourceDependenciesFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</SourceDependenciesFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <SmallerTypeCheck>false</SmallerTypeCheck>
+      <SpectreMitigation>false</SpectreMitigation>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
+      <TranslateIncludes>false</TranslateIncludes>
+      <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <XMLDocumentationFileName>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</XMLDocumentationFileName>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <IntelJCCErratum>false</IntelJCCErratum>
+      <BuildStlModules>false</BuildStlModules>
+      <TreatAngleIncludeAsExternal>false</TreatAngleIncludeAsExternal>
+      <ExternalWarningLevel>InheritWarningLevel</ExternalWarningLevel>
+      <TreatExternalTemplatesAsInternal>true</TreatExternalTemplatesAsInternal>
+      <DisableAnalyzeExternal>false</DisableAnalyzeExternal>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_UNICODE;UNICODE;</PreprocessorDefinitions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\ThirdParty\DirectXTK\Include;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Shaders;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\InteractiveToolsFramework;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\ThirdParty;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Windows;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\ThirdParty\include;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Editor;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\CoreUObject;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Core;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Launch;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Engine;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Engine\Classes;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source;C:\Users\Jungle\Documents\GitHub\W04GameGem\;;C:\vcpkg\installed\x64-windows\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 </AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LinkCompiled>true</LinkCompiled>
+    </ClCompile>
     <ClCompile Include="Engine\Source\Runtime\Slate\Widgets\Layout\SSplitter.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\ResourceMgr.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\UnrealClient.cpp" />
@@ -240,13 +317,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Source\Editor\PropertyEditor\ProfilingEditorPanel.h" />
-    <ClInclude Include="Engine\Source\Runtime\Core\Container\Octree.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\Delegate.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\DelegateCombination.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Frustum.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Octree\Octree.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\ViewportClient.h" />
     <ClInclude Include="Engine\Source\Editor\LevelEditor\SLevelEditor.h" />
     <ClInclude Include="Engine\Source\Editor\PropertyEditor\ViewportTypePanel.h" />

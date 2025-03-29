@@ -6,7 +6,7 @@
 #include "UnrealEd/EditorViewportClient.h"
 #include "UnrealEd/UnrealEd.h"
 #include "UnrealClient.h"
-#include "Container/Octree.h"
+#include "Engine/Octree/Octree.h"
 #include "slate/Widgets/Layout/SSplitter.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "Profiling/PlatformTime.h"

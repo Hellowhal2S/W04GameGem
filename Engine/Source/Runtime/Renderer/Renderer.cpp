@@ -20,7 +20,7 @@
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
 #include "Components/SkySphereComponent.h"
-#include "Container/Octree.h"
+#include "Engine/Octree/Octree.h"
 #include "Math/Frustum.h"
 #include "Profiling/PlatformTime.h"
 #include "Profiling/StatRegistry.h"
