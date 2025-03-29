@@ -16,11 +16,13 @@ void FRenderBatchData::CreateBuffersIfNeeded(FRenderer& Renderer)
 {
     if (!VertexBuffer && !Vertices.IsEmpty())
     {
+        UE_LOG(LogLevel::Display,"CreateVBuffer %d",Vertices.Num()*sizeof(FVertexSimple));
         VertexBuffer = Renderer.CreateVertexBuffer(Vertices, Vertices.Num() * sizeof(FVertexSimple));
     }
 
     if (!IndexBuffer && !Indices.IsEmpty())
     {
+        UE_LOG(LogLevel::Display,"CreateIBuffer %d",Indices.Num()*sizeof(UINT));
         IndexBuffer = Renderer.CreateIndexBuffer(Indices, Indices.Num() * sizeof(UINT));
         IndicesNum = Indices.Num();
     }
@@ -178,6 +180,8 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
 void FOctreeNode::BuildBatchRenderData()
 {
     FScopeCycleCounter Timer("BuildBatchRenderData");
+    VertexBufferSizeInBytes = 0;
+    IndexBufferSizeInBytes = 0;
     // Step 1. 자식 먼저 처리
     for (int i = 0; i < 8; ++i)
     {
@@ -247,11 +251,12 @@ void FOctreeNode::BuildBatchRenderData()
                     TransformedVertex.z = WorldPosition.z;
 
                     // 노멀 변환 (정규화 포함)
+                    /*
                     FVector LocalNormal{TransformedVertex.nx, TransformedVertex.ny, TransformedVertex.nz};
                     FVector WorldNormal = FMatrix::TransformVector(LocalNormal, ModelMatrix).Normalize();
                     TransformedVertex.nx = WorldNormal.x;
                     TransformedVertex.ny = WorldNormal.y;
-                    TransformedVertex.nz = WorldNormal.z;
+                    TransformedVertex.nz = WorldNormal.z;*/
                     Entry.Vertices.Add(TransformedVertex);
 
                     IndexMap.Add(oldIndex, VertexStart++);
@@ -259,6 +264,13 @@ void FOctreeNode::BuildBatchRenderData()
                 Entry.Indices.Add(IndexMap[oldIndex]);
             }
         }
+    }
+    // Step 3. 최종 버퍼 크기 계산 (현재 Vertex/Index는 FVertexSimple, uint32 기준)
+    for (const auto& Pair : CachedBatchData)
+    {
+        const FRenderBatchData& Batch = Pair.Value;
+        VertexBufferSizeInBytes+= Batch.Vertices.Num() * sizeof(FVertexSimple);
+        IndexBufferSizeInBytes += Batch.Indices.Num() * sizeof(uint32);
     }
     FStatRegistry::RegisterResult(Timer);
 }
@@ -348,7 +360,6 @@ void FOctreeNode::RenderBatches(
 void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
-
     if (Containment == EFrustumContainment::Contains)
     {
         UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
@@ -359,8 +370,10 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
             FRenderBatchData& RenderData = Pair.Value;
 
             // 🟡 Lazy 생성: 필요한 경우에만 생성
+            FScopeCycleCounter Timer("CreateBuffers");
             RenderData.CreateBuffersIfNeeded(Renderer);
-
+            FStatRegistry::RegisterResult(Timer); 
+            
             if (!RenderData.VertexBuffer || !RenderData.IndexBuffer)
                 continue;
 

@@ -29,6 +29,8 @@ struct FRenderBatchData
 class FOctreeNode
 {
 public:
+    uint64 VertexBufferSizeInBytes = 0;
+    uint64 IndexBufferSizeInBytes = 0;
     FBoundingBox Bounds;
     TArray<UPrimitiveComponent*> Components;
     FOctreeNode* Children[8] = {nullptr};

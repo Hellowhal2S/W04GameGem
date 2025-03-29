@@ -30,11 +30,7 @@ struct FVertexSimple
 struct FVertexCompact
 {
     float x, y, z;            // Position (12 bytes)
-    int16 nx, ny, nz;         // 압축된 Normal (6 bytes)
     uint16 u, v;              // 압축된 UV (4 bytes)
-    uint8 MaterialIndex;      // 최대 256개까지 (1 byte)
-    uint8 Padding[1];         // 정렬 맞춤용
-    // 총: 24 bytes (기존 52 bytes 대비 약 54% 절감)
 };
 inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
 {
@@ -44,18 +40,9 @@ inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
     Dst.x = Src.x;
     Dst.y = Src.y;
     Dst.z = Src.z;
-
-    // Normal: [-1, 1] → [-32767, 32767]로 압축
-    Dst.nx = static_cast<int16>(FMath::Clamp(Src.nx, -1.0f, 1.0f) * 32767.0f);
-    Dst.ny = static_cast<int16>(FMath::Clamp(Src.ny, -1.0f, 1.0f) * 32767.0f);
-    Dst.nz = static_cast<int16>(FMath::Clamp(Src.nz, -1.0f, 1.0f) * 32767.0f);
-
     // UV: [0, 1] → [0, 65535]
     Dst.u = static_cast<uint16>(FMath::Clamp(Src.u, 0.0f, 1.0f) * 65535.0f);
     Dst.v = static_cast<uint16>(FMath::Clamp(Src.v, 0.0f, 1.0f) * 65535.0f);
-
-    // Material Index
-    Dst.MaterialIndex = static_cast<uint8>(Src.MaterialIndex);
 
     return Dst;
 }

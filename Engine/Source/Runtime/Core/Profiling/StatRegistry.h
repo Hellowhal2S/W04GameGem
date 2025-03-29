@@ -21,7 +21,7 @@ class FStatRegistry
 {
 public:
 	static void RegisterResult(const TStatId& StatId, double InMilliseconds);
-    static void RegisterResult(FScopeCycleCounter& Timer);
+    static double RegisterResult(FScopeCycleCounter& Timer);
 	static double GetLastMilliseconds(const TStatId& StatId);
 	struct FFPSStats
 	{
