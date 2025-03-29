@@ -54,6 +54,7 @@ public:
         const FMatrix& VP
     );
 };
+inline int GVertexBufferCutoffDepth = 1;//해당 수보다 깊은 노드만 버퍼 보유
 
 class FOctree
 {
@@ -65,7 +66,6 @@ public:
     void QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
     void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node);
     FOctreeNode* GetRoot() { return Root; };
-    constexpr int GVertexBufferCutoffDepth = 2; // 예: 2보다 깊은 노드만 버퍼 생성
 
 private:
     FOctreeNode* Root;

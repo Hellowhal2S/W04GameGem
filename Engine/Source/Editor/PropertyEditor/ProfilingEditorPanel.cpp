@@ -1,5 +1,6 @@
 #include "ProfilingEditorPanel.h"
 
+#include "Container/Octree.h"
 #include "Container/String.h"
 #include "ImGUI/imgui.h"
 #include "Profiling/PlatformTime.h"
@@ -27,6 +28,7 @@ void ProfilingEditorPanel::Render()
         auto Stats = FStatRegistry::GetFPSStats(Stat_Frame);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
+        ImGui::SliderInt("VertexBuffer Depth", &GVertexBufferCutoffDepth, 1, 5);
 
         // 드롭다운으로 StatMap 표시
         if (ImGui::CollapsingHeader("Stat Timings (ms)", ImGuiTreeNodeFlags_DefaultOpen))
