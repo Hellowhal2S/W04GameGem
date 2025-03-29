@@ -2,6 +2,8 @@
 
 #include "Octree.h"
 
+#include <sstream>
+
 #include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Math/Frustum.h"
@@ -244,7 +246,10 @@ void FOctreeNode::BuildBatchRenderData()
                 if (!IndexMap.Contains(oldIndex))
                 {
                     FVertexCompact TransformedVertex = ConvertToCompact(MeshVertices[oldIndex]);
-
+                    FVertexSimple Vertex=MeshVertices[oldIndex];
+                    std::ostringstream oss;
+                    oss << Vertex.x << " " << Vertex.y << " " << Vertex.z << " " << Vertex.u << " " << Vertex.v;
+                    std::string Str = oss.str();
                     // 월드 위치 변환
                     FVector LocalPosition{TransformedVertex.x, TransformedVertex.y, TransformedVertex.z};
                     FVector WorldPosition = ModelMatrix.TransformPosition(LocalPosition);

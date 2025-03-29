@@ -23,7 +23,7 @@ cbuffer MaterialConstants : register(b1)
 struct PS_INPUT
 {
     float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD0;
+    float2 UV       : TEXCOORD0;
 };
 
 struct PS_OUTPUT
@@ -34,8 +34,8 @@ struct PS_OUTPUT
 PS_OUTPUT mainPS(PS_INPUT input)
 {
     PS_OUTPUT output;
-    output.color = Textures.Sample(Sampler, input.texcoord + UVOffset);
-    float4 texColor = Textures.Sample(Sampler, input.texcoord + UVOffset);
+    output.color = Textures.Sample(Sampler, input.UV + UVOffset);
+    float4 texColor = Textures.Sample(Sampler, input.UV + UVOffset);
     //건너뛰기 코드 
     texColor = float4(texColor + Material.DiffuseColor, 1.0f);
     output.color = texColor;
