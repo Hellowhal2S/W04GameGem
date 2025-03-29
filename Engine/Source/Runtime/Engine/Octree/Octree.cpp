@@ -348,6 +348,8 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
 {
     FMatrix MVP = FMatrix::Identity * VP;
     FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
+
+    Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
     for (const auto& Pair : RenderMap)
     {
         const TArray<FRenderBatchData*>& Batches = Pair.Value;
@@ -368,9 +370,6 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
             UINT offset = 0;
             Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &Batch->VertexBuffer, &Renderer.Stride, &offset);
             Renderer.Graphics->DeviceContext->IASetIndexBuffer(Batch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-            Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
-
             Renderer.Graphics->DeviceContext->DrawIndexed(Batch->IndicesNum, 0, 0);
         }
     }
