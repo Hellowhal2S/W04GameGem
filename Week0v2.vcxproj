@@ -430,7 +430,7 @@
   <ItemGroup>
     <FxCompile Include="Shaders\CompactMeshPixelShader.hlsl">
       <ObjectFileOutput>C:\Users\Jungle\Documents\GitHub\W04GameGem\Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
-      <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
+      <TrackerLogDirectory>$(IntDir)Week0v2.tlog\</TrackerLogDirectory>
       <EntryPointName>mainPS</EntryPointName>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ShaderModel>5.0</ShaderModel>
@@ -440,7 +440,7 @@
       <ShaderType>Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\CompactMeshVertexShader.hlsl">
-      <ObjectFileOutput>C:\Users\Jungle\Documents\GitHub\W04GameGem\Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(OutDir)%(Filename).cso</ObjectFileOutput>
       <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
       <EntryPointName>mainVS</EntryPointName>
       <SuppressStartupBanner>true</SuppressStartupBanner>
