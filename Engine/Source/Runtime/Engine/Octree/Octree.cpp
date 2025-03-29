@@ -60,6 +60,11 @@ FOctreeNode::~FOctreeNode()
             Batch.IndexBuffer->Release();
             Batch.IndexBuffer = nullptr;
         }
+        Batch.Vertices.Empty();
+        Batch.Indices.Empty();
+        Batch.Vertices.ShrinkToFit();
+        Batch.Indices.ShrinkToFit();
+        
     }
 }
 
@@ -179,7 +184,6 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
 
 void FOctreeNode::BuildBatchRenderData()
 {
-    FScopeCycleCounter Timer("BuildBatchRenderData");
     VertexBufferSizeInBytes = 0;
     IndexBufferSizeInBytes = 0;
     // Step 1. 자식 먼저 처리
@@ -205,7 +209,6 @@ void FOctreeNode::BuildBatchRenderData()
                 }
         }
     }
-
     // Step 2. 본인 노드의 Components 처리
     for (UPrimitiveComponent* Comp : Components)
     {
@@ -265,39 +268,56 @@ void FOctreeNode::BuildBatchRenderData()
         VertexBufferSizeInBytes += Batch.Vertices.Num() * sizeof(FVertexCompact);
         IndexBufferSizeInBytes += Batch.Indices.Num() * sizeof(uint32);
     }
-    FStatRegistry::RegisterResult(Timer);
 }
 
 void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
 {
     FScopeCycleCounter Timer("BuildBatchBuffers");
-    for (auto& Pair : CachedBatchData)
+    if (Depth >= GRenderDepthMin && Depth <= GRenderDepthMax)
     {
-        FRenderBatchData& RenderData = Pair.Value;
-
-        if (!RenderData.Vertices.IsEmpty())
+        for (auto& Pair : CachedBatchData)
         {
-            RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
-                RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
-        }
+            FRenderBatchData& RenderData = Pair.Value;
 
-        if (!RenderData.Indices.IsEmpty())
-        {
-            RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
-                RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
-        }
+            if (!RenderData.Vertices.IsEmpty())
+            {
+                RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
+                    RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
+            }
 
-        RenderData.IndicesNum = RenderData.Indices.Num();
-        RenderData.Vertices.Empty();
-        RenderData.Indices.Empty();
+            if (!RenderData.Indices.IsEmpty())
+            {
+                RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
+                    RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
+            }
+
+            RenderData.IndicesNum = RenderData.Indices.Num();
+        }
     }
-
     for (int i = 0; i < 8; ++i)
     {
         if (Children[i])
             Children[i]->BuildBatchBuffers(Renderer);
     }
     FStatRegistry::RegisterResult(Timer);
+}
+
+void FOctreeNode::ClearBatchDatas(FRenderer& Renderer)
+{
+    for (auto& Pair : CachedBatchData)
+    {
+        FRenderBatchData& RenderData = Pair.Value;
+        RenderData.Vertices.Empty();
+        RenderData.Vertices.ShrinkToFit();
+        RenderData.Indices.Empty();
+        RenderData.Indices.ShrinkToFit();
+    }
+
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+            Children[i]->ClearBatchDatas(Renderer);
+    }
 }
 
 void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap)

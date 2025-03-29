@@ -37,6 +37,10 @@ void ProfilingEditorPanel::Render()
         {
             
         }
+        if (ImGui::Button("Clear Cache"))
+        {
+            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->ClearBatchDatas(FEngineLoop::renderer);
+        }
         if (ImGui::Button("Clear Buffer"))
         {
             GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);

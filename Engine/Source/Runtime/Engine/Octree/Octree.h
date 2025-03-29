@@ -44,6 +44,9 @@ public:
 
     void BuildBatchRenderData();
     void BuildBatchBuffers(FRenderer& Renderer);
+    void ClearBatchDatas(FRenderer& Renderer);
+
+    
     void Insert(UPrimitiveComponent* Component, int MaxDepth = 5);
     void Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
     void TickBuffers(int CurrentFrame, int FrameThreshold);
