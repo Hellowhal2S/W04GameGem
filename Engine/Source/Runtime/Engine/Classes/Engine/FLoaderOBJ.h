@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <queue>
 #include <sstream>
 
 #include "Define.h"
@@ -486,7 +487,7 @@ public:
             return nullptr;
         }
 
-        SaveStaticMeshToBinary(BinaryPath, *NewStaticMesh);
+        // SaveStaticMeshToBinary(BinaryPath, *NewStaticMesh);
         ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
         return NewStaticMesh;
     }
@@ -711,4 +712,105 @@ private:
     inline static TMap<FString, OBJ::FStaticMeshRenderData*> ObjStaticMeshMap;
     inline static TMap<FWString, UStaticMesh*> staticMeshMap;
     inline static TMap<FString, UMaterial*> materialMap;
+};
+
+
+struct Quadric {
+    float data[10] = {0};
+
+    void Add(const Quadric& q) {
+        for (int i = 0; i < 10; i++) data[i] += q.data[i];
+    }
+};
+
+struct EdgeCollapse {
+    int v1, v2;
+    float cost;
+    FVector newPos;
+
+    bool operator<(const EdgeCollapse& other) const {
+        return cost > other.cost; // 최소 힙을 위해 부등호 반대로 설정
+    }
+};
+
+class QEMSimplifier {
+public:
+    static void Simplify(FObjInfo& obj, int targetVertexCount) {
+        int numVertices = obj.Vertices.Num();
+        int numFaces = obj.VertexIndices.Num() / 3;
+
+        // 1. 각 정점에 대한 QEM 행렬 계산
+        std::vector<Quadric> quadrics(numVertices);
+        for (int i = 0; i < numFaces; i++) {
+            int v0 = obj.VertexIndices[i * 3 + 0];
+            int v1 = obj.VertexIndices[i * 3 + 1];
+            int v2 = obj.VertexIndices[i * 3 + 2];
+            
+            FVector p0 = obj.Vertices[v0];
+            FVector p1 = obj.Vertices[v1];
+            FVector p2 = obj.Vertices[v2];
+            
+            FVector normal = (p1 - p0).Cross(p2 - p0).Normalize();
+            float d = -normal.Dot(p0);
+            
+            Quadric q;
+            q.data[0] = normal.x * normal.x;
+            q.data[1] = normal.x * normal.y;
+            q.data[2] = normal.x * normal.z;
+            q.data[3] = normal.x * d;
+            q.data[4] = normal.y * normal.y;
+            q.data[5] = normal.y * normal.z;
+            q.data[6] = normal.y * d;
+            q.data[7] = normal.z * normal.z;
+            q.data[8] = normal.z * d;
+            q.data[9] = d * d;
+            
+            quadrics[v0].Add(q);
+            quadrics[v1].Add(q);
+            quadrics[v2].Add(q);
+        }
+
+        // 2. 엣지 콜랩스를 위한 우선순위 큐 생성
+        std::priority_queue<EdgeCollapse> collapseQueue;
+        for (int i = 0; i < numVertices; i++) {
+            for (int j = i + 1; j < numVertices; j++) {
+                FVector midpoint = (obj.Vertices[i] + obj.Vertices[j]) * 0.5f;
+                float cost = ComputeCollapseCost(quadrics[i], quadrics[j], midpoint);
+                collapseQueue.push({i, j, cost, midpoint});
+            }
+        }
+
+        // 3. 목표 정점 개수까지 단순화 수행
+        while (obj.Vertices.Num() > targetVertexCount && !collapseQueue.empty()) {
+            EdgeCollapse bestCollapse = collapseQueue.top();
+            collapseQueue.pop();
+            
+            int v1 = bestCollapse.v1;
+            int v2 = bestCollapse.v2;
+            
+            obj.Vertices[v1] = bestCollapse.newPos;
+            
+            quadrics[v1].Add(quadrics[v2]);
+            quadrics[v2] = quadrics[v1];
+            
+            // 정점 삭제
+            obj.Vertices.RemoveAt(v2);
+            obj.Normals.RemoveAt(v2);
+            obj.UVs.RemoveAt(v2);
+            
+            // 인덱스 재매핑
+            for (uint32& index : obj.VertexIndices) {
+                if (index == v2) index = v1;
+                if (index > v2) index--;
+            }
+        }
+    }
+
+private:
+    static float ComputeCollapseCost(const Quadric& q1, const Quadric& q2, FVector& newPos) {
+        Quadric q = q1;
+        q.Add(q2);
+        
+        return q.data[9]; // 단순히 d*d 값 활용 (더 정교한 방법 가능)
+    }
 };
