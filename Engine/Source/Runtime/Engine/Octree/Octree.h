@@ -37,7 +37,7 @@ public:
     bool bIsLeaf = true;
     int Depth = 0;
 
-    TMap<FString, FRenderBatchData> CachedBatchData;
+    TMap<FString, FRenderBatchData*> CachedBatchData;
 
     FOctreeNode(const FBoundingBox& InBounds, int InDepth);
     ~FOctreeNode();
@@ -53,8 +53,11 @@ public:
         const FFrustum& Frustum,
         const FMatrix& VP
     );
+private:
+    void MergeChildBatchData();
+    void ProcessLocalComponents();
 };
-inline int GVertexBufferCutoffDepth = 1;//해당 수보다 깊은 노드만 버퍼 보유
+inline int GVertexBufferCutoffDepth = 0;//해당 수보다 깊은 노드만 버퍼 보유
 
 class FOctree
 {

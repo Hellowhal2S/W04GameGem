@@ -1112,7 +1112,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     Frustum.ConstructFrustum(View*Proj);
     FStatRegistry::RegisterResult(FrustumTimer);
 
-    const int FrameThreshold = 2; // 프레임 이상 사용 안 한 버퍼 제거
+    const int FrameThreshold = 120; // 프레임 이상 사용 안 한 버퍼 제거
     World->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, FrameThreshold);
 
     FScopeCycleCounter BatchTimer("BatchTimer");
