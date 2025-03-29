@@ -36,7 +36,7 @@ void FRenderBatchData::CreateBuffersIfNeeded(FRenderer& Renderer)
     // Vertices.ShrinkToFit();
     // Indices.ShrinkToFit();
 }
-
+/*
 void FRenderBatchData::ReleaseBuffersIfUnused(int CurrentFrame, int ThresholdFrames)
 {
     if ((CurrentFrame - LastUsedFrame) > ThresholdFrames)
@@ -54,7 +54,7 @@ void FRenderBatchData::ReleaseBuffersIfUnused(int CurrentFrame, int ThresholdFra
         }
     }
 }
-
+*/
 FOctreeNode::FOctreeNode(const FBoundingBox& InBounds, int InDepth)
     : Bounds(InBounds)
     , Depth(InDepth)
@@ -192,7 +192,7 @@ void FOctreeNode::BuildBatchRenderData()
         if (Children[i])
         {
             Children[i]->BuildBatchRenderData();
-            if (Depth >= GVertexBufferCutoffDepth)
+            if (Depth >= GRenderDepthMin)
                 for (const auto& Pair : Children[i]->CachedBatchData)
                 {
                     const FString& MaterialName = Pair.Key;
@@ -246,7 +246,7 @@ void FOctreeNode::BuildBatchRenderData()
                 if (!IndexMap.Contains(oldIndex))
                 {
                     FVertexCompact TransformedVertex = ConvertToCompact(MeshVertices[oldIndex]);
-                    FVertexSimple Vertex=MeshVertices[oldIndex];
+                    FVertexSimple Vertex = MeshVertices[oldIndex];
                     std::ostringstream oss;
                     oss << Vertex.x << " " << Vertex.y << " " << Vertex.z << " " << Vertex.u << " " << Vertex.v;
                     std::string Str = oss.str();
@@ -368,9 +368,9 @@ void FOctreeNode::RenderBatches(
 void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
-    if (Containment == EFrustumContainment::Contains)
+    if (Containment == EFrustumContainment::Contains||Containment == EFrustumContainment::Intersects&&Depth==GRenderDepthMax)
     {
-        if (Depth >= GVertexBufferCutoffDepth)
+        if (Depth >= GRenderDepthMin)
         {
             UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
                    Depth, CachedBatchData.Num());
@@ -405,7 +405,6 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
 
                 Renderer.Graphics->DeviceContext->DrawIndexed(RenderData.IndicesNum, 0, 0);
             }
-
             return;
         }
     }

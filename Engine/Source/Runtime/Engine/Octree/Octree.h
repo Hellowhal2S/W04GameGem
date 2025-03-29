@@ -22,7 +22,7 @@ struct FRenderBatchData
     int32 LastUsedFrame = -1;
 
     void CreateBuffersIfNeeded(FRenderer& Renderer);
-    void ReleaseBuffersIfUnused(int CurrentFrame, int ThresholdFrames);
+    //void ReleaseBuffersIfUnused(int CurrentFrame, int ThresholdFrames);
 };
 
 
@@ -54,8 +54,8 @@ public:
         const FMatrix& VP
     );
 };
-inline int GVertexBufferCutoffDepth = 1;//해당 수보다 깊은 노드만 버퍼 보유
-
+inline int GRenderDepthMin = 1;  // 최소 깊이 (이보다 얕으면 스킵)
+inline int GRenderDepthMax = 4;  // 최대 깊이 (이보다 깊으면 스킵)
 class FOctree
 {
 public:
@@ -72,3 +72,5 @@ private:
 };
 
 void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node, int MaxDepth);
+//FRenderer::RenderStaticMeshe에서 사용
+const int FrameThreshold = 2; // 프레임 이상 사용 안 한 버퍼 제거

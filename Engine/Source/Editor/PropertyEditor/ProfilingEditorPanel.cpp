@@ -1,5 +1,6 @@
 #include "ProfilingEditorPanel.h"
 
+#include "World.h"
 #include "Engine/Octree/Octree.h"
 #include "Container/String.h"
 #include "ImGUI/imgui.h"
@@ -28,8 +29,12 @@ void ProfilingEditorPanel::Render()
         auto Stats = FStatRegistry::GetFPSStats(Stat_Frame);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
-        ImGui::SliderInt("VertexBuffer Depth", &GVertexBufferCutoffDepth, 1, 5);
-
+        ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
+        ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        if (ImGui::Button("Clear Buffer"))
+        {
+            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
+        }
         // 드롭다운으로 StatMap 표시
         if (ImGui::CollapsingHeader("Stat Timings (ms)", ImGuiTreeNodeFlags_DefaultOpen))
         {
