@@ -238,6 +238,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Source\Editor\PropertyEditor\ProfilingEditorPanel.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Container\Culling.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\Delegate.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\DelegateCombination.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />

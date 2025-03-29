@@ -20,6 +20,7 @@
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
 #include "Components/SkySphereComponent.h"
+#include "Container/Culling.h"
 
 void FRenderer::Initialize(FGraphicsDevice* graphics)
 {
@@ -31,6 +32,7 @@ void FRenderer::Initialize(FGraphicsDevice* graphics)
     CreateLightingBuffer();
     CreateLitUnlitBuffer();
     UpdateLitUnlitConstant(1);
+    CreateOcclusionQuery();
 }
 
 void FRenderer::Release()
@@ -352,6 +354,9 @@ void FRenderer::CreateConstantBuffer()
 
     constantbufferdesc.ByteWidth = sizeof(FTextureConstants) + 0xf & 0xfffffff0;
     Graphics->Device->CreateBuffer(&constantbufferdesc, nullptr, &TextureConstantBufer);
+
+    constantbufferdesc.ByteWidth = sizeof(FOcclusionConstants) + 0xf & 0xfffffff0;
+    Graphics->Device->CreateBuffer(&constantbufferdesc, nullptr, &OclussionBuffer); 
 }
 
 void FRenderer::CreateLightingBuffer()
@@ -683,12 +688,10 @@ void FRenderer::RenderTextPrimitive(
     UINT offset = 0;
     Graphics->DeviceContext->IASetVertexBuffers(0, 1, &pVertexBuffer, &TextureStride, &offset);
 
-    // �Է� ���̾ƿ� �� �⺻ ����
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     Graphics->DeviceContext->PSSetShaderResources(0, 1, &_TextureSRV);
     Graphics->DeviceContext->PSSetSamplers(0, 1, &_SamplerState);
 
-    // ��ο� ȣ�� (6���� �ε��� ���)
     Graphics->DeviceContext->Draw(numVertices, 0);
 }
 
@@ -1010,17 +1013,67 @@ void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> Act
     UPrimitiveBatch::GetInstance().RenderBatch(ActiveViewport->GetViewMatrix(), ActiveViewport->GetProjectionMatrix());
 
     // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
-        RenderStaticMeshes(World, ActiveViewport);
+    RenderStaticMeshes(World, ActiveViewport);
     // RenderGizmos(World, ActiveViewport);
     // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText))
         // RenderBillboards(World, ActiveViewport);
     // RenderLight(World, ActiveViewport);
-    ClearRenderArr();
+    ClearRenderArr();   
 }
 
 void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
     PrepareShader();
+
+    Frustum CameraFrustum;
+    FMatrix view = ActiveViewport->GetViewMatrix();
+    FMatrix proj = ActiveViewport->GetProjectionMatrix();
+    FMatrix viewProj = view * proj;
+
+    AABB frustumAABB = CameraFrustum.GetBoundingBox(viewProj);
+
+    int minX = std::max(0, static_cast<int>(floor(frustumAABB.min.x)));
+    int maxX = std::min(49, static_cast<int>(ceil(frustumAABB.max.x)));
+
+    int minY = std::max(0, static_cast<int>(floor(frustumAABB.min.y)));
+    int maxY = std::min(49, static_cast<int>(ceil(frustumAABB.max.y)));
+
+    int minZ = std::max(0, static_cast<int>(floor(frustumAABB.min.z)));
+    int maxZ = std::min(1, static_cast<int>(ceil(frustumAABB.max.z)));
+
+    TArray<UPrimitiveComponent*> VisibleComponents;
+
+    for (int x = minX; x <= maxX; ++x)
+    {
+        for (int y = minY; y <= maxY; ++y)
+        {
+            for (int z = minZ; z <= maxZ; ++z)
+            {
+                FVector min(x, y, z);
+                FVector max(x + 1, y + 1, z + 1);
+
+                //for (UPrimitiveComponent* Comp : Components)
+                //{
+                //    if (Frustum.Intersect(Comp->WorldAABB))
+                //        OutResults.Add(Comp);
+                //}
+                //if (CameraFrustum.Intersects(box))
+                //{
+                //    VisibleComponents.Add(box);
+                //}
+            }
+        }
+    }
+
+    for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
+    {
+        // Occlsuion Test 시작
+        BeginOcclusionTest();
+
+        bool isVisible = GetOcclusionResult();
+
+    }
+
     for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
     {
         FMatrix Model = JungleMath::CreateModelMatrix(
@@ -1176,12 +1229,144 @@ void FRenderer::RenderBillboards(UWorld* World, std::shared_ptr<FEditorViewportC
     PrepareShader();
 }
 
+
 void FRenderer::RenderLight(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
     for (auto Light : LightObjs)
     {
-        FMatrix Model = JungleMath::CreateModelMatrix(Light->GetWorldLocation(), Light->GetWorldRotation(), {1, 1, 1});
+        FMatrix Model = JungleMath::CreateModelMatrix(Light->GetWorldLocation(), Light->GetWorldRotation(), { 1, 1, 1 });
         UPrimitiveBatch::GetInstance().AddCone(Light->GetWorldLocation(), Light->GetRadius(), 15, 140, Light->GetColor(), Model);
         UPrimitiveBatch::GetInstance().RenderOBB(Light->GetBoundingBox(), Light->GetWorldLocation(), Model);
     }
+}
+
+void FRenderer::CreateOcclusionQuery()
+{
+    for (int i = 0; i < CellSize; i++)
+    {
+        D3D11_QUERY_DESC queryDesc;
+        queryDesc.Query = D3D11_QUERY_OCCLUSION;
+        queryDesc.MiscFlags = 0;
+        Graphics->Device->CreateQuery(&queryDesc, &OcclusionQueries[CellId].query);
+    }
+
+}
+
+void FRenderer::BeginOcclusionTest(int CellId)
+{
+    Graphics->DeviceContext->Begin(&OcclusionQueries[CellId].query);
+    
+    Graphics->DeviceContext->OMSetDepthStencilState(Graphics->DepthStencilStateZOnly, 0);
+    // Graphics->DeviceContext->DrawIndexed();
+
+    Graphics->DeviceContext->End(&OcclusionQueries[CellId].query);
+}
+
+bool FRenderer::GetOcclusionResult(int CellId)
+{
+    // 결과를 얻기 위해 GPU 동기화
+    if (Graphics->DeviceContext->GetData(&OcclusionQueries[CellId].query, nullptr, 0, 0) == S_FALSE)
+    {
+        return false;
+    }
+
+    UINT64 visiblePixelCount = 0;
+    Graphics->DeviceContext->GetData(&OcclusionQueries[CellId].query, &visiblePixelCount, sizeof(UINT64), D3D11_ASYNC_GETDATA_DONOTFLUSH);
+
+    return visiblePixelCount > 0;
+}
+
+void FRenderer::CreateOcclusion()
+{
+    ID3DBlob* VertexShaderCSO;
+
+    D3DCompileFromFile(L"Shaders/OcclusionShader.hlsl", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &VertexShaderCSO, nullptr);
+    Graphics->Device->CreateVertexShader(VertexShaderCSO->GetBufferPointer(), VertexShaderCSO->GetBufferSize(), nullptr, &OcclusionVertexShader);
+
+    D3D11_INPUT_ELEMENT_DESC layout[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    Graphics->Device->CreateInputLayout(
+        layout, ARRAYSIZE(layout), VertexShaderCSO->GetBufferPointer(), VertexShaderCSO->GetBufferSize(), &OcclusionInputLayout
+    );
+
+    VertexShaderCSO->Release();
+
+    // AABB의 8개 꼭지점
+    FVector vertices[8] = {
+        bounds.min,
+        FVector(bounds.max.x, bounds.min.y, bounds.min.z),
+        FVector(bounds.min.x, bounds.max.y, bounds.min.z),
+        FVector(bounds.min.x, bounds.min.y, bounds.max.z),
+        FVector(bounds.max.x, bounds.max.y, bounds.min.z),
+        FVector(bounds.max.x, bounds.min.y, bounds.max.z),
+        FVector(bounds.min.x, bounds.max.y, bounds.max.z),
+        bounds.max
+    };
+
+    // AABB의 12개 모서리를 나타내는 인덱스
+    uint32_t indices[36] = {
+        0,1,2, 0,2,3,
+        4,6,5, 4,7,6,
+        0,4,5, 0,5,1,
+        2,6,7, 2,7,3,
+        0,3,7, 0,7,4,
+        1,5,6, 1,6,2
+    };
+
+    // 버텍스 버퍼 생성
+    D3D11_BUFFER_DESC vertexBufferDesc = {};
+    vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    vertexBufferDesc.ByteWidth = sizeof(vertices);
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    D3D11_SUBRESOURCE_DATA vertexData = {};
+    vertexData.pSysMem = vertices;
+    ID3D11Buffer* vertexBuffer;
+    Graphics->Device->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer);
+
+    // 인덱스 버퍼 생성
+    D3D11_BUFFER_DESC indexBufferDesc = {};
+    indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    indexBufferDesc.ByteWidth = sizeof(indices);
+    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    D3D11_SUBRESOURCE_DATA indexData = {};
+    indexData.pSysMem = indices;
+    ID3D11Buffer* indexBuffer;
+    Graphics->Device->CreateBuffer(&indexBufferDesc, &indexData, &indexBuffer);
+}
+
+// AABB를 렌더링하는 함수
+void FRenderer::RenderAABB(const AABB& bounds)
+{
+
+
+    // 셰이더 설정
+    Graphics->DeviceContext->VSSetShader(VertexShader, nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(nullptr, nullptr, 0);
+    Graphics->DeviceContext->IASetInputLayout(OcclusionInputLayout);
+
+    // 렌더링 상태 설정
+    UINT stride = sizeof(FVector);
+    UINT offset = 0;
+    Graphics->DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+    Graphics->DeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+    Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // 상수 버퍼 (world 변환)
+    FVector center = (bounds.min + bounds.max) * 0.5f;
+    FVector scale = bounds.max - bounds.min;
+
+    Graphics->DeviceContext->UpdateSubresource(cbWorld, 0, nullptr, &world, 0, 0);
+    Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &cbWorld);
+    Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &cbViewProj);
+
+    OcclusionStates->SetOcclusionRenderState(Graphics->DeviceContext);
+
+    // 드로우 호출
+    Graphics->DeviceContext->DrawIndexed(36, 0, 0);
+
+    // 버퍼 해제
+    vertexBuffer->Release();
+    indexBuffer->Release();
 }

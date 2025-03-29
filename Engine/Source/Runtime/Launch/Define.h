@@ -249,6 +249,34 @@ struct FBoundingBox
         return true;
     }
 
+    //완전히 포함될 경우
+    bool Contains(const FBoundingBox& Other) const
+    {
+        return
+            min.x <= Other.min.x && max.x >= Other.max.x &&
+            min.y <= Other.min.y && max.y >= Other.max.y &&
+            min.z <= Other.min.z && max.z >= Other.max.z;
+    }
+    //일부라도 겹칠 경우
+    bool Overlaps(const FBoundingBox& Other) const
+    {
+        return !(Other.min.x > max.x || Other.max.x < min.x ||
+            Other.min.y > max.y || Other.max.y < min.y ||
+            Other.min.z > max.z || Other.max.z < min.z);
+    }
+    FVector GetCenter() const
+    {
+        return (min + max) * 0.5f;
+    }
+    // 단일 좌표가 박스 내에 있는지 검사
+    bool Contains(const FVector& Point) const
+    {
+        return
+            Point.x >= min.x && Point.x <= max.x &&
+            Point.y >= min.y && Point.y <= max.y &&
+            Point.z >= min.z && Point.z <= max.z;
+    }
+
 };
 struct FCone
 {
@@ -315,4 +343,8 @@ struct FTextureConstants {
     float VOffset;
     float pad0;
     float pad1;
+};
+
+struct FOcclusionConstants {
+    FVector4 MVP;
 };

@@ -131,6 +131,14 @@ void FGraphicsDevice::CreateDepthStencilState()
     depthStencilDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;  // 깊이 비교를 항상 통과
     Device->CreateDepthStencilState(&depthStencilDesc, &DepthStateDisable);
 
+    D3D11_DEPTH_STENCIL_DESC occlusionQueryStencilDesc = {};
+    occlusionQueryStencilDesc.DepthEnable = TRUE;
+    occlusionQueryStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // Z 쓰지 않음
+    occlusionQueryStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;            // 기본 깊이 테스트
+    occlusionQueryStencilDesc.StencilEnable = FALSE;
+
+    Device->CreateDepthStencilState(&occlusionQueryStencilDesc, &DepthStencilStateZOnly);
+
 }
 
 void FGraphicsDevice::CreateRasterizerState()

@@ -8,6 +8,7 @@
 #include "EngineBaseTypes.h"
 #include "Define.h"
 #include "Container/Set.h"
+#include "Container/Culling.h"
 
 class ULightComponentBase;
 class UWorld;
@@ -19,6 +20,7 @@ class FEditorViewportClient;
 class UBillboardComponent;
 class UStaticMeshComponent;
 class UGizmoBaseComponent;
+
 class FRenderer 
 {
 
@@ -35,6 +37,7 @@ public:
     ID3D11Buffer* MaterialConstantBuffer = nullptr;
     ID3D11Buffer* SubMeshConstantBuffer = nullptr;
     ID3D11Buffer* TextureConstantBufer = nullptr;
+    ID3D11Buffer* OclussionBuffer = nullptr;
 
     FLighting lightingData;
 
@@ -157,5 +160,18 @@ public:
     ID3D11ShaderResourceView* pBBSRV = nullptr;
     ID3D11ShaderResourceView* pConeSRV = nullptr;
     ID3D11ShaderResourceView* pOBBSRV = nullptr;
+
+    // Occlusion Query
+private:
+    TMap<int, Group> OcclusionQueries;
+    ID3D11VertexShader* OcclusionVertexShader = nullptr;  
+    ID3D11InputLayout* OcclusionInputLayout = nullptr;
+
+public:
+    void CreateOcclusionQuery();
+    void BeginOcclusionTest(int CellId);
+    bool GetOcclusionResult(int CellId);
+    void CreateOcclusionShader();
+    void RenderAABB(const AABB& bounds);
 };
 

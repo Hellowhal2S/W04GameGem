@@ -19,5 +19,7 @@ public:
     static float DegToRad(float degree);
     static FQuat EulerToQuaternion(const FVector& eulerDegrees);
     static FVector QuaternionToEuler(const FQuat& quat);
+
+    static FBoundingBox TransformAABB(const FBoundingBox& LocalAABB, const FMatrix& Transform);
 };
 

@@ -1,4 +1,6 @@
 #include "PrimitiveComponent.h"
+#include "GameFramework/Actor.h"
+#include "Math/JungleMath.h"
 
 UPrimitiveComponent::UPrimitiveComponent()
 {
@@ -95,4 +97,11 @@ bool UPrimitiveComponent::IntersectRayTriangle(const FVector& rayOrigin, const F
     }
 
     return false;
+}
+
+void UPrimitiveComponent::UpdateWorldAABB()
+{
+    FMatrix ModelMatrix = GetOwner()->GetModelMatrix();
+    WorldAABB = JungleMath::TransformAABB(AABB, ModelMatrix);
+
 }

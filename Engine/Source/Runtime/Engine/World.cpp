@@ -34,6 +34,22 @@ void UWorld::CreateBaseObject()
     // {
     //     LocalGizmo = FObjectFactory::ConstructObject<UTransformGizmo>();
     // }
+
+    FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
+    for (int i = 0; i < 100; i++)
+    {
+        for (int j = 0; j < 100; j++)
+        {
+            AActor* SpawnedActor = SpawnActor<AActor>();
+            UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
+            FManagerOBJ::CreateStaticMesh("Assets/apple_mid.obj");
+            apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
+            FVector newPos = FVector(i, j, 0);
+            SpawnedActor->SetActorLocation(newPos);
+            //apple->UpdateWorldAABB();
+
+        }
+    }
 }
 
 void UWorld::ReleaseBaseObject()

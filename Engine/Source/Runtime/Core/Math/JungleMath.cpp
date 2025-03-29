@@ -182,3 +182,33 @@ float JungleMath::DegToRad(float degree)
 {
     return static_cast<float>(degree * (PI / 180.0f));
 }
+
+FBoundingBox JungleMath::TransformAABB(const FBoundingBox& LocalAABB, const FMatrix& Transform)
+{
+    // 8개의 정점 구하기
+    const FVector& min = LocalAABB.min;
+    const FVector& max = LocalAABB.max;
+
+    FVector corners[8] = {
+        FVector(min.x, min.y, min.z),
+        FVector(max.x, min.y, min.z),
+        FVector(min.x, max.y, min.z),
+        FVector(max.x, max.y, min.z),
+        FVector(min.x, min.y, max.z),
+        FVector(max.x, min.y, max.z),
+        FVector(min.x, max.y, max.z),
+        FVector(max.x, max.y, max.z),
+    };
+
+    FVector WorldMin(FLT_MAX, FLT_MAX, FLT_MAX);
+    FVector WorldMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+    for (int i = 0; i < 8; ++i)
+    {
+        FVector WorldPos = Transform.TransformPosition(corners[i]);
+        WorldMin = FVector::Min(WorldMin, WorldPos);
+        WorldMax = FVector::Max(WorldMax, WorldPos);
+    }
+
+    return FBoundingBox(WorldMin, WorldMax);
+}
