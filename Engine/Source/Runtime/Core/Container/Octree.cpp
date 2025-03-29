@@ -16,8 +16,8 @@ void FRenderBatchData::CreateBuffersIfNeeded(FRenderer& Renderer)
 {
     if (!VertexBuffer && !Vertices.IsEmpty())
     {
-        UE_LOG(LogLevel::Display,"CreateVBuffer %d",Vertices.Num()*sizeof(FVertexSimple));
-        VertexBuffer = Renderer.CreateVertexBuffer(Vertices, Vertices.Num() * sizeof(FVertexSimple));
+        UE_LOG(LogLevel::Display,"CreateVBuffer %d",Vertices.Num()*sizeof(FVertexCompact));
+        VertexBuffer = Renderer.CreateVertexBuffer(Vertices, Vertices.Num() * sizeof(FVertexCompact));
     }
 
     if (!IndexBuffer && !Indices.IsEmpty())
@@ -241,7 +241,7 @@ void FOctreeNode::BuildBatchRenderData()
                 UINT oldIndex = MeshIndices[Subset.IndexStart + j];
                 if (!IndexMap.Contains(oldIndex))
                 {
-                    FVertexSimple TransformedVertex =MeshVertices[oldIndex];
+                    FVertexCompact TransformedVertex =ConvertToCompact(MeshVertices[oldIndex]);
 
                     // 월드 위치 변환
                     FVector LocalPosition{TransformedVertex.x, TransformedVertex.y, TransformedVertex.z};
@@ -265,11 +265,11 @@ void FOctreeNode::BuildBatchRenderData()
             }
         }
     }
-    // Step 3. 최종 버퍼 크기 계산 (현재 Vertex/Index는 FVertexSimple, uint32 기준)
+    // Step 3. 최종 버퍼 크기 계산 (현재 Vertex/Index는 FVertexCompact, uint32 기준)
     for (const auto& Pair : CachedBatchData)
     {
         const FRenderBatchData& Batch = Pair.Value;
-        VertexBufferSizeInBytes+= Batch.Vertices.Num() * sizeof(FVertexSimple);
+        VertexBufferSizeInBytes+= Batch.Vertices.Num() * sizeof(FVertexCompact);
         IndexBufferSizeInBytes += Batch.Indices.Num() * sizeof(uint32);
     }
     FStatRegistry::RegisterResult(Timer);
@@ -285,7 +285,7 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
         if (!RenderData.Vertices.IsEmpty())
         {
             RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
-                RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexSimple));
+                RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
         }
 
         if (!RenderData.Indices.IsEmpty())

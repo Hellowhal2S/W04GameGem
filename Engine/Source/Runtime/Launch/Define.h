@@ -27,10 +27,13 @@ struct FVertexSimple
     uint32 MaterialIndex;
 };
 // 압축된 Vertex 구조체 정의 (사과 렌더링 최적화 전용)
-struct FVertexCompact
+struct alignas(16) FVertexCompact
 {
     float x, y, z;            // Position (12 bytes)
-    uint16 u, v;              // 압축된 UV (4 bytes)
+    //uint16 u, v;              // 압축된 UV (4 bytes)
+
+    float u=0, v=0;
+    float padding[3];   // 12 → 총 32 (정렬 완료)
 };
 inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
 {
@@ -40,9 +43,11 @@ inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
     Dst.x = Src.x;
     Dst.y = Src.y;
     Dst.z = Src.z;
+    Dst.u = Src.u;
+    Dst.v = Src.v;
     // UV: [0, 1] → [0, 65535]
-    Dst.u = static_cast<uint16>(FMath::Clamp(Src.u, 0.0f, 1.0f) * 65535.0f);
-    Dst.v = static_cast<uint16>(FMath::Clamp(Src.v, 0.0f, 1.0f) * 65535.0f);
+    //Dst.u = static_cast<uint16>(FMath::Clamp(Src.u, 0.0f, 1.0f) * 65535.0f);
+    //Dst.v = static_cast<uint16>(FMath::Clamp(Src.v, 0.0f, 1.0f) * 65535.0f);
 
     return Dst;
 }

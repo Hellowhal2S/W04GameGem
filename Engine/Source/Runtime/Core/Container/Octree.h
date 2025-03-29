@@ -15,7 +15,7 @@ struct FRenderBatchData
 {
     ID3D11Buffer* VertexBuffer = nullptr;
     ID3D11Buffer* IndexBuffer = nullptr;
-    TArray<FVertexSimple> Vertices;
+    TArray<FVertexCompact> Vertices;
     TArray<UINT> Indices;
     FObjMaterialInfo MaterialInfo;
     uint32 IndicesNum = 0;
@@ -65,6 +65,7 @@ public:
     void QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
     void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node);
     FOctreeNode* GetRoot() { return Root; };
+    constexpr int GVertexBufferCutoffDepth = 2; // 예: 2보다 깊은 노드만 버퍼 생성
 
 private:
     FOctreeNode* Root;

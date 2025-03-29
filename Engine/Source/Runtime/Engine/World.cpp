@@ -44,11 +44,11 @@ void UWorld::CreateBaseObject()
     FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
 
 
-    for (int i = 0; i < 30; i++)
+    for (int i = 0; i < 10; i++)
     {
-        for (int j = 0; j < 30; j++)
+        for (int j = 0; j < 10; j++)
         {
-            for (int k = 0; k < 20; k++)
+            for (int k = 0; k < 10; k++)
             {
                 AActor* SpawnedActor = SpawnActor<AActor>();
                 UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();

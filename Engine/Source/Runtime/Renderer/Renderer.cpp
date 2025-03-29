@@ -44,7 +44,7 @@ void FRenderer::Release()
     ReleaseLineShader();
     ReleaseConstantBuffer();
 }
-
+/*
 void FRenderer::CreateShader()
 {
     ID3DBlob* VertexShaderCSO;
@@ -71,40 +71,28 @@ void FRenderer::CreateShader()
     Stride = sizeof(FVertexSimple);
     VertexShaderCSO->Release();
     PixelShaderCSO->Release();
-}
-/*
+}*/
+
 void FRenderer::CreateShader()
 {
     ID3DBlob* VertexShaderCSO;
     ID3DBlob* PixelShaderCSO;
 
-    D3DCompileFromFile(L"Shaders/StaticMeshVertexShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &VertexShaderCSO, nullptr);
+    D3DCompileFromFile(L"Shaders/CompactMeshVertexShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &VertexShaderCSO, nullptr);
     Graphics->Device->CreateVertexShader(VertexShaderCSO->GetBufferPointer(), VertexShaderCSO->GetBufferSize(), nullptr, &VertexShader);
 
-    D3DCompileFromFile(L"Shaders/StaticMeshPixelShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &PixelShaderCSO, nullptr);
+    D3DCompileFromFile(L"Shaders/CompactMeshPixelShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &PixelShaderCSO, nullptr);
     Graphics->Device->CreatePixelShader(PixelShaderCSO->GetBufferPointer(), PixelShaderCSO->GetBufferSize(), nullptr, &PixelShader);
 
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         // POSITION (float3)
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-
-        // NORMAL (int16x3 → packed as R16G16B16_SNORM → fallback to R16G16_SNORM + 1 byte if needed)
-        {"NORMAL", 0, DXGI_FORMAT_R16G16B16A16_SNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-
+        
         // TEXCOORD (uint16x2)
-        {"TEXCOORD", 0, DXGI_FORMAT_R16G16_UNORM, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, sizeof(float) * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
 
-        // MATERIAL INDEX (uint8)
-        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R8_UINT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
 
-    D3D11_INPUT_ELEMENT_DESC layout[] = {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0}
-    };
     Graphics->Device->CreateInputLayout(
         layout,
         ARRAYSIZE(layout),
@@ -113,11 +101,11 @@ void FRenderer::CreateShader()
         &InputLayout
     );
 
-    Stride = sizeof(FVertexSimple); // 24 bytes
+    Stride = sizeof(FVertexCompact); // 24 bytes
     VertexShaderCSO->Release();
     PixelShaderCSO->Release();
 }
-*/
+
 void FRenderer::ReleaseShader()
 {
     if (InputLayout)

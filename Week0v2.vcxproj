@@ -351,6 +351,28 @@
     <ClInclude Include="Engine\Source\Runtime\Engine\World.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shaders\CompactMeshPixelShader.hlsl">
+      <ObjectFileOutput>C:\Users\Jungle\Documents\GitHub\W04GameGem\Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
+      <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
+      <EntryPointName>mainPS</EntryPointName>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <ShaderModel>5.0</ShaderModel>
+      <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
+      <DisableOptimizations>false</DisableOptimizations>
+      <EnableDebuggingInformation>false</EnableDebuggingInformation>
+      <ShaderType>Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\CompactMeshVertexShader.hlsl">
+      <ObjectFileOutput>C:\Users\Jungle\Documents\GitHub\W04GameGem\Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
+      <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
+      <EntryPointName>mainVS</EntryPointName>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <ShaderModel>5.0</ShaderModel>
+      <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
+      <DisableOptimizations>false</DisableOptimizations>
+      <EnableDebuggingInformation>false</EnableDebuggingInformation>
+      <ShaderType>Vertex</ShaderType>
+    </FxCompile>
     <FxCompile Include="Shaders\StaticMeshPixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
