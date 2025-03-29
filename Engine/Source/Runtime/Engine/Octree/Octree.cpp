@@ -65,6 +65,20 @@ FOctreeNode::~FOctreeNode()
 {
     for (int i = 0; i < 8; ++i)
         delete Children[i];
+    for (auto& Pair : CachedBatchData)
+    {
+        FRenderBatchData& Batch = Pair.Value;
+        if (Batch.VertexBuffer)
+        {
+            Batch.VertexBuffer->Release();
+            Batch.VertexBuffer = nullptr;
+        }
+        if (Batch.IndexBuffer)
+        {
+            Batch.IndexBuffer->Release();
+            Batch.IndexBuffer = nullptr;
+        }
+    }
 }
 
 void FOctreeNode::Insert(UPrimitiveComponent* Component, int MaxDepth)
