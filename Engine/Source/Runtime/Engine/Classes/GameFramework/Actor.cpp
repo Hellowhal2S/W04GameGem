@@ -1,6 +1,7 @@
 ﻿#include "Actor.h"
 
 #include "World.h"
+#include "Math/JungleMath.h"
 
 void AActor::BeginPlay()
 {
@@ -134,4 +135,12 @@ bool AActor::SetActorScale(const FVector& NewScale)
         return true;
     }
     return false;
+}
+FMatrix AActor::GetModelMatrix() const
+{
+    return JungleMath::CreateModelMatrix(
+        GetActorLocation(),
+        GetActorRotation(),
+        GetActorScale()
+    );
 }

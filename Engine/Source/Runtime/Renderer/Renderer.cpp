@@ -20,6 +20,10 @@
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
 #include "Components/SkySphereComponent.h"
+#include "Engine/Octree/Octree.h"
+#include "Math/Frustum.h"
+#include "Profiling/PlatformTime.h"
+#include "Profiling/StatRegistry.h"
 
 void FRenderer::Initialize(FGraphicsDevice* graphics)
 {
@@ -40,7 +44,7 @@ void FRenderer::Release()
     ReleaseLineShader();
     ReleaseConstantBuffer();
 }
-
+/*
 void FRenderer::CreateShader()
 {
     ID3DBlob* VertexShaderCSO;
@@ -65,6 +69,39 @@ void FRenderer::CreateShader()
     );
 
     Stride = sizeof(FVertexSimple);
+    VertexShaderCSO->Release();
+    PixelShaderCSO->Release();
+}*/
+
+void FRenderer::CreateShader()
+{
+    ID3DBlob* VertexShaderCSO;
+    ID3DBlob* PixelShaderCSO;
+
+    D3DCompileFromFile(L"Shaders/CompactMeshVertexShader.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &VertexShaderCSO, nullptr);
+    Graphics->Device->CreateVertexShader(VertexShaderCSO->GetBufferPointer(), VertexShaderCSO->GetBufferSize(), nullptr, &VertexShader);
+
+    D3DCompileFromFile(L"Shaders/CompactMeshPixelShader.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &PixelShaderCSO, nullptr);
+    Graphics->Device->CreatePixelShader(PixelShaderCSO->GetBufferPointer(), PixelShaderCSO->GetBufferSize(), nullptr, &PixelShader);
+
+    D3D11_INPUT_ELEMENT_DESC layout[] = {
+        // POSITION (float3)
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        
+        // TEXCOORD (uint16x2)
+        {"TEXCOORD", 0, DXGI_FORMAT_R16G16_UNORM, 0, sizeof(float) * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
+
+    };
+
+    Graphics->Device->CreateInputLayout(
+        layout,
+        ARRAYSIZE(layout),
+        VertexShaderCSO->GetBufferPointer(),
+        VertexShaderCSO->GetBufferSize(),
+        &InputLayout
+    );
+
+    Stride = sizeof(FVertexCompact); // 24 bytes
     VertexShaderCSO->Release();
     PixelShaderCSO->Release();
 }
@@ -256,7 +293,43 @@ ID3D11Buffer* FRenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
     }
     return vertexBuffer;
 }
+ID3D11Buffer* FRenderer::CreateVertexBuffer(FVertexCompact* vertices, UINT byteWidth) const
+{
+    // 2. Create a vertex buffer
+    D3D11_BUFFER_DESC vertexbufferdesc = {};
+    vertexbufferdesc.ByteWidth = byteWidth;
+    vertexbufferdesc.Usage = D3D11_USAGE_IMMUTABLE; // will never be updated 
+    vertexbufferdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
+    D3D11_SUBRESOURCE_DATA vertexbufferSRD = {vertices};
+
+    ID3D11Buffer* vertexBuffer;
+
+    HRESULT hr = Graphics->Device->CreateBuffer(&vertexbufferdesc, &vertexbufferSRD, &vertexBuffer);
+    if (FAILED(hr))
+    {
+        UE_LOG(LogLevel::Warning, "VertexBuffer Creation faild");
+    }
+    return vertexBuffer;
+}
+ID3D11Buffer* FRenderer::CreateVertexBuffer(const TArray<FVertexCompact>& vertices, UINT byteWidth)
+{
+    D3D11_BUFFER_DESC desc = {};
+    desc.ByteWidth = byteWidth;
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = vertices.GetData();
+
+    ID3D11Buffer* vertexBuffer = nullptr;
+    HRESULT hr = Graphics->Device->CreateBuffer(&desc, &initData, &vertexBuffer);
+    if (FAILED(hr))
+    {
+        UE_LOG(LogLevel::Warning, "FVertexCompact VertexBuffer Creation failed");
+    }
+    return vertexBuffer;
+}
 ID3D11Buffer* FRenderer::CreateVertexBuffer(const TArray<FVertexSimple>& vertices, UINT byteWidth) const
 {
     D3D11_BUFFER_DESC vertexbufferdesc = {};
@@ -451,6 +524,14 @@ void FRenderer::UpdateConstant(const FMatrix& MVP, const FMatrix& NormalMatrix, 
 
 void FRenderer::UpdateMaterial(const FObjMaterialInfo& MaterialInfo) const
 {
+    
+    if (!bMaterialDirty && CachedMaterialInfo == MaterialInfo)
+    {
+        return;
+    }
+    
+    CachedMaterialInfo = MaterialInfo;
+    bMaterialDirty = false;
     if (MaterialConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE ConstantBufferMSR; // GPU�� �޸� �ּ� ����
@@ -471,6 +552,7 @@ void FRenderer::UpdateMaterial(const FObjMaterialInfo& MaterialInfo) const
 
     if (MaterialInfo.bHasTexture == true)
     {
+        CachedTexturePath = MaterialInfo.DiffuseTexturePath;
         std::shared_ptr<FTexture> texture = FEngineLoop::resourceMgr.GetTexture(MaterialInfo.DiffuseTexturePath);
         Graphics->DeviceContext->PSSetShaderResources(0, 1, &texture->TextureSRV);
         Graphics->DeviceContext->PSSetSamplers(0, 1, &texture->SamplerState);
@@ -940,7 +1022,7 @@ void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) cons
     }
     else
     {
-        UE_LOG(LogLevel::Warning, "gridParams ���� ����");
+        //UE_LOG(LogLevel::Warning, "gridParams ���� ����");
     }
 }
 
@@ -1003,6 +1085,7 @@ void FRenderer::ClearRenderArr()
 
 void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
+    FScopeCycleCounter Timer("FRenderer::Render");
     Graphics->DeviceContext->RSSetViewports(1, &ActiveViewport->GetD3DViewport());
     Graphics->ChangeRasterizer(ActiveViewport->GetViewMode());
     ChangeViewMode(ActiveViewport->GetViewMode());
@@ -1010,62 +1093,154 @@ void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> Act
     UPrimitiveBatch::GetInstance().RenderBatch(ActiveViewport->GetViewMatrix(), ActiveViewport->GetProjectionMatrix());
 
     // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
-        RenderStaticMeshes(World, ActiveViewport);
+    RenderStaticMeshes(World, ActiveViewport);
     // RenderGizmos(World, ActiveViewport);
     // if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText))
         // RenderBillboards(World, ActiveViewport);
     // RenderLight(World, ActiveViewport);
     ClearRenderArr();
+    FStatRegistry::RegisterResult(Timer); 
 }
 
 void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
     PrepareShader();
-    for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
+    FScopeCycleCounter FrustumTimer("Frustum");
+    FFrustum Frustum;
+    FMatrix View = ActiveViewport->GetViewMatrix();
+    FMatrix Proj = ActiveViewport->GetProjectionMatrix();
+    Frustum.ConstructFrustum(View*Proj);
+    FStatRegistry::RegisterResult(FrustumTimer);
+
+    //World->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, FrameThreshold);
+
+    FScopeCycleCounter BatchTimer("BatchTimer");
+    World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
+    FStatRegistry::RegisterResult(BatchTimer); 
+    /*
+    TArray<UPrimitiveComponent*> VisibleComponents;
+    if (World->SceneOctree)
     {
+        World->SceneOctree->QueryVisible(Frustum, VisibleComponents);
+        //DebugRenderOctreeNode(&UPrimitiveBatch::GetInstance(),World->SceneOctree->GetRoot(),5);
+    }
+    FStatRegistry::RegisterResult(FrustumTimer);
+    
+    FScopeCycleCounter Timer1("Visible Render");
+    //RenderVisibleComponents(World,VisibleComponents,View*Proj);
+    FStatRegistry::RegisterResult(Timer1);
+    FScopeCycleCounter Timer2("Sort Render");
+    FScopeCycleCounter Timer3("Sort");
+    TArray<FSortedRenderEntry> SortedEntries;
+    CollectSortedRenderEntries(VisibleComponents, SortedEntries);
+    FStatRegistry::RegisterResult(Timer3);
+    RenderSortedEntries(World,ActiveViewport,SortedEntries, View*Proj);
+    FStatRegistry::RegisterResult(Timer2);
+    UE_LOG(LogLevel::Display,"Visible Obj:%d",VisibleComponents.Len());
+*/
+}
+void FRenderer::RenderVisibleComponents(UWorld* World,TArray<UPrimitiveComponent*>& VisibleComponents,FMatrix VP)
+{
+    for (UPrimitiveComponent* Prim : VisibleComponents)
+    {
+        UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(Prim);
+        if (!StaticMeshComp || !StaticMeshComp->GetStaticMesh())
+            continue;
+
         FMatrix Model = JungleMath::CreateModelMatrix(
             StaticMeshComp->GetWorldLocation(),
             StaticMeshComp->GetWorldRotation(),
             StaticMeshComp->GetWorldScale()
         );
-        // 최종 MVP 행렬
-        FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
-        // 노말 회전시 필요 행렬
+        FMatrix MVP = Model * VP;
         FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
         FVector4 UUIDColor = StaticMeshComp->EncodeUUID() / 255.0f;
-        if (World->GetSelectedActor() == StaticMeshComp->GetOwner())
-        {
-            UpdateConstant(MVP, NormalMatrix, UUIDColor, true);
-        }
-        else
-            UpdateConstant(MVP, NormalMatrix, UUIDColor, false);
 
-        //SkySphere Exeption
-        // if (USkySphereComponent* skysphere = Cast<USkySphereComponent>(StaticMeshComp))
-        // {
-        //     UpdateTextureConstant(skysphere->UOffset, skysphere->VOffset);
-        // }
-        // else
-        // {
-        //     UpdateTextureConstant(0, 0);
-        // }
-
-        if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_AABB))
-        {
-            UPrimitiveBatch::GetInstance().RenderAABB(
-                StaticMeshComp->GetBoundingBox(),
-                StaticMeshComp->GetWorldLocation(),
-                Model
-            );
-        }
-                
-    
-        if (!StaticMeshComp->GetStaticMesh()) continue;
+        UpdateConstant(MVP, NormalMatrix, UUIDColor, World->GetSelectedActor() == StaticMeshComp->GetOwner());
 
         OBJ::FStaticMeshRenderData* renderData = StaticMeshComp->GetStaticMesh()->GetRenderData();
-        if (renderData == nullptr) continue;
+        if (renderData)
+        {
+            RenderPrimitive(renderData, StaticMeshComp->GetStaticMesh()->GetMaterials(),
+                            StaticMeshComp->GetOverrideMaterials(), StaticMeshComp->GetselectedSubMeshIndex());
+        }
+    }
+}
+void FRenderer::CollectSortedRenderEntries(const TArray<UPrimitiveComponent*>& VisibleComponents,TArray<FSortedRenderEntry>& OutSortedEntries)
+{
+    for (UPrimitiveComponent* Prim : VisibleComponents)
+    {
+        UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(Prim);
+        if (!StaticMeshComp || !StaticMeshComp->GetStaticMesh()) continue;
 
-        RenderPrimitive(renderData, StaticMeshComp->GetStaticMesh()->GetMaterials(), StaticMeshComp->GetOverrideMaterials(), StaticMeshComp->GetselectedSubMeshIndex());
+        OBJ::FStaticMeshRenderData* RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData();
+        if (!RenderData) continue;
+
+        const TArray<FStaticMaterial*>& Materials = StaticMeshComp->GetStaticMesh()->GetMaterials();
+        const TArray<UMaterial*>& OverrideMaterials = StaticMeshComp->GetOverrideMaterials();
+
+        for (int SubMeshIndex = 0; SubMeshIndex < RenderData->MaterialSubsets.Num(); ++SubMeshIndex)
+        {
+            int MatIndex = RenderData->MaterialSubsets[SubMeshIndex].MaterialIndex;
+            UMaterial* Mat = OverrideMaterials.IsValidIndex(MatIndex) && OverrideMaterials[MatIndex] ?
+                             OverrideMaterials[MatIndex] :
+                             Materials.IsValidIndex(MatIndex) ? Materials[MatIndex]->Material : nullptr;
+
+            if (Mat)
+            {
+                OutSortedEntries.Add({ StaticMeshComp, Mat, RenderData, SubMeshIndex });
+            }
+        }
+    }
+
+    // 머티리얼 포인터로 정렬 (동일 머티리얼끼리 묶이도록)
+    OutSortedEntries.Sort([](const FSortedRenderEntry& A, const FSortedRenderEntry& B) {
+        return A.Material < B.Material;
+    });
+}
+void FRenderer::RenderSortedEntries(UWorld* World,std::shared_ptr<FEditorViewportClient> ActiveViewport,
+    const TArray<FSortedRenderEntry>& SortedEntries,
+    const FMatrix& VP
+)
+{
+    for (const FSortedRenderEntry& Entry : SortedEntries)
+    {
+        UStaticMeshComponent* StaticMeshComp = Entry.Component;
+        if (!StaticMeshComp || !Entry.RenderData)
+            continue;
+        FScopeCycleCounter Timer("Matrix");
+        FMatrix Model = JungleMath::CreateModelMatrix(
+            StaticMeshComp->GetWorldLocation(),
+            StaticMeshComp->GetWorldRotation(),
+            StaticMeshComp->GetWorldScale()
+        );
+        FMatrix MVP = Model * VP;
+        FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
+        FStatRegistry::RegisterResult(Timer); 
+        FVector4 UUIDColor = StaticMeshComp->EncodeUUID() / 255.0f;
+
+        FScopeCycleCounter Timer2("UpdateConstant");
+        UpdateConstant(MVP, NormalMatrix, UUIDColor, World->GetSelectedActor() == StaticMeshComp->GetOwner());
+
+        UpdateSubMeshConstant(Entry.SubMeshIndex == StaticMeshComp->GetselectedSubMeshIndex());
+        FStatRegistry::RegisterResult(Timer2); 
+        FScopeCycleCounter Timer3("UpdateMat");
+
+        if (Entry.Material)
+            UpdateMaterial(Entry.Material->GetMaterialInfo());
+        FStatRegistry::RegisterResult(Timer3); 
+        FScopeCycleCounter Timer4("SetBuffer");
+
+        UINT offset = 0;
+        const FMaterialSubset& Subset = Entry.RenderData->MaterialSubsets[Entry.SubMeshIndex];
+        Graphics->DeviceContext->IASetVertexBuffers(0, 1, &Entry.RenderData->VertexBuffer, &Stride, &offset);
+        if (Entry.RenderData->IndexBuffer)
+        {
+            Graphics->DeviceContext->IASetIndexBuffer(Entry.RenderData->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+            Graphics->DeviceContext->DrawIndexed(Subset.IndexCount, Subset.IndexStart, 0);
+        }
+        FStatRegistry::RegisterResult(Timer4); 
+
     }
 }
 

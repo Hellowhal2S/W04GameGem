@@ -4,6 +4,8 @@
 #include "UObject/ObjectFactory.h"
 #include "UObject/ObjectMacros.h"
 
+class FFrustum;
+class FOctree;
 class FObjectFactory;
 class AActor;
 class UObject;
@@ -54,9 +56,16 @@ private:
     UCameraComponent* camera = nullptr;
     AEditorPlayer* EditorPlayer = nullptr;
 
+
 public:
     UObject* worldGizmo = nullptr;
 
+    FOctree* SceneOctree;
+    
+    void BuildOctree();
+    void ClearOctree();
+    void DebugDrawFrustum(const FFrustum& Frustum);
+    
     const TSet<AActor*>& GetActors() const { return ActorsArray; }
 
     UTransformGizmo* LocalGizmo = nullptr;
@@ -74,6 +83,8 @@ public:
     UObject* GetWorldGizmo() const { return worldGizmo; }
     USceneComponent* GetPickingGizmo() const { return pickingGizmo; }
     void SetPickingGizmo(UObject* Object);
+
+    void ClearScene();
 };
 
 

@@ -43,11 +43,12 @@ void FStatRegistry::RegisterResult(const TStatId& StatId, double InMilliseconds)
 	}
 }
 
-void FStatRegistry::RegisterResult(FScopeCycleCounter& Timer)
+double FStatRegistry::RegisterResult(FScopeCycleCounter& Timer)
 {
 	const TStatId StatId = Timer.GetStatId();
 	double Ms = FPlatformTime::ToMilliseconds(Timer.Finish());
 	RegisterResult(StatId, Ms);
+    return Ms;
 }
 double FStatRegistry::GetLastMilliseconds(const TStatId& StatId)
 {
@@ -56,7 +57,7 @@ double FStatRegistry::GetLastMilliseconds(const TStatId& StatId)
 	{
 		return *Value;
 	}
-	return 0.0f;
+	return 0.0;
 }
 double FStatRegistry::GetFPS(const TStatId& StatId)
 {

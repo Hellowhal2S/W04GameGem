@@ -219,4 +219,8 @@ struct FMath
 		}
 		return A;
 	}
+    static bool IsNearlyEqual(float A, float B, float Tolerance = 1e-4f)
+	{
+	    return fabs(A - B) <= Tolerance;
+	}
 };
