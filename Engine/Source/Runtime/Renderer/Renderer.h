@@ -147,7 +147,7 @@ public: // line shader
     void RenderGizmos(const UWorld* World, const std::shared_ptr<FEditorViewportClient>& ActiveViewport);
     void RenderLight(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport);
     void RenderBillboards(UWorld* World,std::shared_ptr<FEditorViewportClient> ActiveViewport);
-
+    
     //Render Profiling Testing
     struct FSortedRenderEntry
     {
@@ -168,6 +168,7 @@ public: // line shader
     mutable FObjMaterialInfo CachedMaterialInfo;
     mutable std::wstring CachedTexturePath;
     mutable bool bMaterialDirty = true;
+    bool bMaterialSort = true;
 private:
     TArray<UStaticMeshComponent*> StaticMeshObjs;
     TArray<UGizmoBaseComponent*> GizmoObjs;

@@ -23,14 +23,20 @@ void ProfilingEditorPanel::Render()
                      ))
     {   
         // FPS 표시
+        const auto& StatMap = FStatRegistry::GetStatMap();
         static TStatId Stat_Frame("MainFrame");
-        float fps = static_cast<float>(FStatRegistry::GetFPS(Stat_Frame));
-        ImGui::Text("FPS: %.2f", fps);
         auto Stats = FStatRegistry::GetFPSStats(Stat_Frame);
+        float fps = static_cast<float>(FStatRegistry::GetFPS(Stat_Frame));
+        float ms = static_cast<float>(FStatRegistry::GetLastMilliseconds(Stat_Frame));
+        ImGui::Text("FPS: %.2f (%.3f)ms", fps,ms);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
-        ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
-        ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        //ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
+        //ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort))
+        {
+            
+        }
         if (ImGui::Button("Clear Buffer"))
         {
             GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
@@ -38,7 +44,7 @@ void ProfilingEditorPanel::Render()
         // 드롭다운으로 StatMap 표시
         if (ImGui::CollapsingHeader("Stat Timings (ms)", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            const auto& StatMap = FStatRegistry::GetStatMap(); // 함수로 접근한다고 가정
+             // 함수로 접근한다고 가정
             for (const auto& Pair : StatMap)
             {
                 const uint32 StatKey = Pair.Key;
