@@ -6,6 +6,7 @@
 #include "UnrealEd/EditorViewportClient.h"
 #include "UnrealEd/UnrealEd.h"
 #include "UnrealClient.h"
+#include "Engine/Octree/Octree.h"
 #include "slate/Widgets/Layout/SSplitter.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "Profiling/PlatformTime.h"
@@ -184,7 +185,7 @@ void FEngineLoop::Tick()
     {
 		FScopeCycleCounter Timer("MainFrame");
         QueryPerformanceCounter(&startTime);
-
+        ADVANCE_FRAME();
         MSG msg;
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
@@ -199,20 +200,28 @@ void FEngineLoop::Tick()
         }
 
         // Input();
+        FScopeCycleCounter Timer1("Tick");
         GWorld->Tick(elapsedTime);
         LevelEditor->Tick(elapsedTime);
+        FStatRegistry::RegisterResult(Timer1);
         Render();
+        
+        FScopeCycleCounter Timer2("UI,Editor");
         UIMgr->BeginFrame();
         UnrealEditor->Render();
 
-        // Console::GetInstance().Draw();
+        //Console::GetInstance().Draw();
 
         UIMgr->EndFrame();
-
+        FStatRegistry::RegisterResult(Timer2);
+        FScopeCycleCounter Timer3("DestroyObjects");
         // Pending 처리된 오브젝트 제거
         GUObjectArray.ProcessPendingDestroyObjects();
+        FStatRegistry::RegisterResult(Timer3);
 
+        FScopeCycleCounter Timer4("SwapBuffer");
         graphicDevice.SwapBuffer();
+        FStatRegistry::RegisterResult(Timer4);
         do
         {
             Sleep(0);

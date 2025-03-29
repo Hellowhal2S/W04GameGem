@@ -1,5 +1,7 @@
 #include "ProfilingEditorPanel.h"
 
+#include "World.h"
+#include "Engine/Octree/Octree.h"
 #include "Container/String.h"
 #include "ImGUI/imgui.h"
 #include "Profiling/PlatformTime.h"
@@ -9,8 +11,8 @@
 void ProfilingEditorPanel::Render()
 {
     ImGui::SetNextWindowPos(ImVec2(10, 50), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.35f); // 반투명 배경
-
+    //ImGui::SetNextWindowBgAlpha(0.35f); // 반투명 배경
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 1)); // 완전한 검정 배경
     if (ImGui::Begin("Performance", nullptr,
                      ImGuiWindowFlags_NoTitleBar |
                      ImGuiWindowFlags_NoResize |
@@ -19,7 +21,7 @@ void ProfilingEditorPanel::Render()
                      ImGuiWindowFlags_NoSavedSettings |
                      ImGuiWindowFlags_NoBringToFrontOnFocus
                      ))
-    {
+    {   
         // FPS 표시
         static TStatId Stat_Frame("MainFrame");
         float fps = static_cast<float>(FStatRegistry::GetFPS(Stat_Frame));
@@ -27,7 +29,12 @@ void ProfilingEditorPanel::Render()
         auto Stats = FStatRegistry::GetFPSStats(Stat_Frame);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
-
+        ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
+        ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        if (ImGui::Button("Clear Buffer"))
+        {
+            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
+        }
         // 드롭다운으로 StatMap 표시
         if (ImGui::CollapsingHeader("Stat Timings (ms)", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -46,6 +53,7 @@ void ProfilingEditorPanel::Render()
         }
     }
     ImGui::End();
+    ImGui::PopStyleColor();
 }
 void ProfilingEditorPanel::OnResize(HWND hWnd)
 {

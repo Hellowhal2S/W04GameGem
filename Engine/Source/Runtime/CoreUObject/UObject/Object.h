@@ -69,15 +69,16 @@ public:
 public:
     void* operator new(size_t size)
     {
-        UE_LOG(LogLevel::Display, "UObject Created : %d", size);
+        //UE_LOG(LogLevel::Display, "UObject Created : %d", size);
 
         void* RawMemory = FPlatformMemory::Malloc<EAT_Object>(size);
+        /*
         UE_LOG(
             LogLevel::Display,
             "TotalAllocationBytes : %d, TotalAllocationCount : %d",
             FPlatformMemory::GetAllocationBytes<EAT_Object>(),
             FPlatformMemory::GetAllocationCount<EAT_Object>()
-        );
+        );*/
         return RawMemory;
     }
 

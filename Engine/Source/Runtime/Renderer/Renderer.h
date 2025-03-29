@@ -9,6 +9,7 @@
 #include "Define.h"
 #include "Container/Set.h"
 
+class UPrimitiveComponent;
 class ULightComponentBase;
 class UWorld;
 class FGraphicsDevice;
@@ -73,6 +74,9 @@ public:
     void CreateLitUnlitBuffer();
     ID3D11Buffer* CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth) const;
     ID3D11Buffer* CreateVertexBuffer(const TArray<FVertexSimple>& vertices, UINT byteWidth) const;
+    ID3D11Buffer* CreateVertexBuffer(const TArray<FVertexCompact>& vertices, UINT byteWidth);
+    ID3D11Buffer* CreateVertexBuffer(FVertexCompact* vertices, UINT byteWidth) const;
+
     ID3D11Buffer* CreateIndexBuffer(uint32* indices, UINT byteWidth) const;
     ID3D11Buffer* CreateIndexBuffer(const TArray<uint32>& indices, UINT byteWidth) const;
 
@@ -143,6 +147,27 @@ public: // line shader
     void RenderGizmos(const UWorld* World, const std::shared_ptr<FEditorViewportClient>& ActiveViewport);
     void RenderLight(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport);
     void RenderBillboards(UWorld* World,std::shared_ptr<FEditorViewportClient> ActiveViewport);
+
+    //Render Profiling Testing
+    struct FSortedRenderEntry
+    {
+        UStaticMeshComponent* Component;
+        UMaterial* Material;
+        OBJ::FStaticMeshRenderData* RenderData;
+        int SubMeshIndex;
+    };
+
+    void RenderVisibleComponents(UWorld* World,TArray<UPrimitiveComponent*>& VisibleComponents,FMatrix VP);
+    void CollectSortedRenderEntries(const TArray<UPrimitiveComponent*>& VisibleComponents,TArray<FSortedRenderEntry>& OutSortedEntries);
+    void RenderSortedEntries(UWorld* World,std::shared_ptr<FEditorViewportClient> ActiveViewport,
+        const TArray<FSortedRenderEntry>& SortedEntries,
+        const FMatrix& VP
+    );
+
+    //Prev Material Cache
+    mutable FObjMaterialInfo CachedMaterialInfo;
+    mutable std::wstring CachedTexturePath;
+    mutable bool bMaterialDirty = true;
 private:
     TArray<UStaticMeshComponent*> StaticMeshObjs;
     TArray<UGizmoBaseComponent*> GizmoObjs;

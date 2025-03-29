@@ -4,6 +4,8 @@
 
 #include <DirectXMath.h>
 
+#include "MathUtility.h"
+
 struct FVector2D
 {
 	float x,y;
@@ -68,6 +70,9 @@ struct FVector
         return FVector(x + other.x, y + other.y, z + other.z);
 #endif
     }
+    FVector operator/(const FVector& Other) const;
+    FVector operator/(float Scalar) const;
+    FVector& operator/=(float Scalar);
 
     // 벡터 내적
     float Dot(const FVector& other) const 
@@ -137,12 +142,41 @@ struct FVector
     {
         return DirectX::XMFLOAT3(x, y, z);
     }
+    static FVector Min(const FVector& A, const FVector& B)
+    {
+        return FVector(
+            FMath::Min(A.x, B.x),
+            FMath::Min(A.y, B.y),
+            FMath::Min(A.z, B.z)
+        );
+    }
 
+    static FVector Max(const FVector& A, const FVector& B)
+    {
+        return FVector(
+            FMath::Max(A.x, B.x),
+            FMath::Max(A.y, B.y),
+            FMath::Max(A.z, B.z)
+        );
+    }
     static const FVector ZeroVector;
     static const FVector OneVector;
     static const FVector UpVector;
     static const FVector ForwardVector;
     static const FVector RightVector;
 };
+inline FVector FVector::operator/(const FVector& Other) const
+{
+    return {x / Other.x, y / Other.y, z / Other.z};
+}
 
+inline FVector FVector::operator/(float Scalar) const
+{
+    return {x / Scalar,  y / Scalar, z / Scalar};
+}
 
+inline FVector& FVector::operator/=(float Scalar)
+{
+    x /= Scalar; y /= Scalar; z /= Scalar;
+    return *this;
+}

@@ -26,6 +26,39 @@ struct FVertexSimple
     float u=0, v=0;
     uint32 MaterialIndex;
 };
+// 압축된 Vertex 구조체 정의 (사과 렌더링 최적화 전용)
+struct FVertexCompact
+{
+    float x, y, z;               // 12 bytes
+    uint16 u, v;                 // 4 bytes (압축된 UV, 0~65535)
+};
+static_assert(sizeof(FVertexCompact) == 16);
+
+inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
+{
+    FVertexCompact Dst;
+
+    // Position 복사
+    Dst.x = Src.x;
+    Dst.y = Src.y;
+    Dst.z = Src.z;
+    float u = Src.u;
+    float v = Src.v;
+    // [-1, 1] → [0, 1] 정규화
+    u = u * 0.5f + 0.5f;
+    v = v * 0.5f + 0.5f;
+
+    // 또는 만약 원래 0~1인데 Y축만 뒤집고 싶다면:
+    // v = 1.0f - v;
+
+    Dst.u = static_cast<uint16>(FMath::Clamp(u, 0.0f, 1.0f) * 65535.0f + 0.5f);
+    Dst.v = static_cast<uint16>(FMath::Clamp(v, 0.0f, 1.0f) * 65535.0f + 0.5f);
+    // UV: [0, 1] → [0, 65535]
+    //Dst.u = static_cast<uint16>(FMath::Clamp(Src.u, 0.0f, 1.0f) * 65535.0f);
+    //Dst.v = static_cast<uint16>(FMath::Clamp(Src.v, 0.0f, 1.0f) * 65535.0f);
+
+    return Dst;
+}
 
 // Material Subset
 struct FMaterialSubset
@@ -106,6 +139,38 @@ struct FObjMaterialInfo
     FString AlphaTextureName;    // map_d : Alpha texture
     FWString AlphaTexturePath;
 };
+inline bool operator==(const FObjMaterialInfo& A, const FObjMaterialInfo& B)
+{
+    return A.MTLName == B.MTLName &&
+           A.bHasTexture == B.bHasTexture &&
+           A.bTransparent == B.bTransparent &&
+
+           A.Diffuse == B.Diffuse &&
+           A.Specular == B.Specular &&
+           A.Ambient == B.Ambient &&
+           A.Emissive == B.Emissive &&
+
+           FMath::IsNearlyEqual(A.SpecularScalar, B.SpecularScalar) &&
+           FMath::IsNearlyEqual(A.DensityScalar, B.DensityScalar) &&
+           FMath::IsNearlyEqual(A.TransparencyScalar, B.TransparencyScalar) &&
+
+           A.IlluminanceModel == B.IlluminanceModel &&
+
+           A.DiffuseTextureName == B.DiffuseTextureName &&
+           A.DiffuseTexturePath == B.DiffuseTexturePath &&
+
+           A.AmbientTextureName == B.AmbientTextureName &&
+           A.AmbientTexturePath == B.AmbientTexturePath &&
+
+           A.SpecularTextureName == B.SpecularTextureName &&
+           A.SpecularTexturePath == B.SpecularTexturePath &&
+
+           A.BumpTextureName == B.BumpTextureName &&
+           A.BumpTexturePath == B.BumpTexturePath &&
+
+           A.AlphaTextureName == B.AlphaTextureName &&
+           A.AlphaTexturePath == B.AlphaTexturePath;
+}
 
 // Cooked Data
 namespace OBJ
@@ -116,7 +181,7 @@ namespace OBJ
         FWString PathName;
         FString DisplayName;
         
-        TArray<FVertexSimple> Vertices;
+        TArray<FVertexCompact> Vertices;
         TArray<UINT> Indices;
 
         ID3D11Buffer* VertexBuffer;
@@ -247,6 +312,34 @@ struct FBoundingBox
         outDistance = (tmin >= 0.0f) ? tmin : 0.0f;
 
         return true;
+    }
+
+    //완전히 포함될 경우
+    bool Contains(const FBoundingBox& Other) const
+    {
+        return
+            min.x <= Other.min.x && max.x >= Other.max.x &&
+            min.y <= Other.min.y && max.y >= Other.max.y &&
+            min.z <= Other.min.z && max.z >= Other.max.z;
+    }
+    //일부라도 겹칠 경우
+    bool Overlaps(const FBoundingBox& Other) const
+    {
+        return !(Other.min.x > max.x || Other.max.x < min.x ||
+                 Other.min.y > max.y || Other.max.y < min.y ||
+                 Other.min.z > max.z || Other.max.z < min.z);
+    }
+    FVector GetCenter() const
+    {
+        return (min + max) * 0.5f;
+    }
+    // 단일 좌표가 박스 내에 있는지 검사
+    bool Contains(const FVector& Point) const
+    {
+        return
+            Point.x >= min.x && Point.x <= max.x &&
+            Point.y >= min.y && Point.y <= max.y &&
+            Point.z >= min.z && Point.z <= max.z;
     }
 
 };
