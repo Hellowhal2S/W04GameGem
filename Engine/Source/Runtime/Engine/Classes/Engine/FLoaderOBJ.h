@@ -460,27 +460,35 @@ struct Quadric {
     float data[10] = {0};
 
     void Add(const Quadric& q) {
-        for (int i = 0; i < 10; i++) data[i] += q.data[i];
+        for (int i = 0; i < 10; i++) {
+            data[i] += q.data[i];
+        }
     }
 };
 
+// 엣지 축소 후보 구조체 (operator< 정의로 우선순위 큐에서 낮은 cost 우선)
 struct EdgeCollapse {
     int v1, v2;
     float cost;
     FVector newPos;
 
     bool operator<(const EdgeCollapse& other) const {
-        return cost > other.cost; // 최소 힙을 위해 부등호 반대로 설정
+        // 최소 힙을 위해 cost가 낮은 엣지가 우선하도록 비교
+        return cost > other.cost;
     }
 };
 
+// 병합 가능한지 여부를 결정하는 함수 (위치, 노말, UV 모두 고려)
+// 임계값은 상황에 맞게 조정할 수 있습니다.
+
 class QEMSimplifier {
 public:
+    // targetVertexCount까지 단순화 (예제에서는 모든 정점 쌍을 검사하는 비효율적 방법)
     static void Simplify(FObjInfo& obj, int targetVertexCount) {
         int numVertices = obj.Vertices.Num();
         int numFaces = obj.VertexIndices.Num() / 3;
 
-        // 1. 각 정점에 대한 QEM 행렬 계산
+        // 1. 각 정점에 대한 QEM 행렬 계산 (각 정점에 인접한 삼각형 면들로부터)
         std::vector<Quadric> quadrics(numVertices);
         for (int i = 0; i < numFaces; i++) {
             int v0 = obj.VertexIndices[i * 3 + 0];
@@ -491,6 +499,7 @@ public:
             FVector p1 = obj.Vertices[v1];
             FVector p2 = obj.Vertices[v2];
             
+            // 면의 법선 계산 (정규화)
             FVector normal = (p1 - p0).Cross(p2 - p0).Normalize();
             float d = -normal.Dot(p0);
             
@@ -511,10 +520,16 @@ public:
             quadrics[v2].Add(q);
         }
 
-        // 2. 엣지 콜랩스를 위한 우선순위 큐 생성
+        // 2. 병합 가능한 정점 쌍에 대해서만 엣지 축소 후보를 우선순위 큐에 추가
         std::priority_queue<EdgeCollapse> collapseQueue;
         for (int i = 0; i < numVertices; i++) {
             for (int j = i + 1; j < numVertices; j++) {
+                // 두 정점의 노말 및 UV도 고려하여 병합 가능한 경우에만 처리
+                if (!CanMerge(obj.Vertices[i], obj.Vertices[j],
+                              obj.UVs[i], obj.UVs[j]))
+                {
+                    continue;
+                }
                 FVector midpoint = (obj.Vertices[i] + obj.Vertices[j]) * 0.5f;
                 float cost = ComputeCollapseCost(quadrics[i], quadrics[j], midpoint);
                 collapseQueue.push({i, j, cost, midpoint});
@@ -522,36 +537,63 @@ public:
         }
 
         // 3. 목표 정점 개수까지 단순화 수행
-        while (obj.Vertices.Num() > targetVertexCount && !collapseQueue.empty()) {
+        while (obj.Vertices.Num() > (size_t)targetVertexCount && !collapseQueue.empty()) {
             EdgeCollapse bestCollapse = collapseQueue.top();
             collapseQueue.pop();
             
             int v1 = bestCollapse.v1;
             int v2 = bestCollapse.v2;
             
-            obj.Vertices[v1] = bestCollapse.newPos;
+            // 이미 삭제된 정점이면 건너뜁니다.
+            if (v1 >= obj.Vertices.Num() || v2 >= obj.Vertices.Num())
+                continue;
             
+            // 병합: v1에 v2를 병합
+            obj.Vertices[v1] = bestCollapse.newPos;
+            // 노말과 UV는 단순 평균 (노말은 정규화 처리)
+            obj.Normals[v1] = (obj.Normals[v1] + obj.Normals[v2]) * 0.5f;
+            obj.Normals[v1] = obj.Normals[v1].Normalize();
+            // obj.UVs[v1] = (obj.UVs[v1] + obj.UVs[v2]) * 0.5f;
+            obj.UVs[v1] = (obj.UVs[v1] + obj.UVs[v2]) * 0.5f;
+
+            
+            // QEM 업데이트: v1의 QEM에 v2의 QEM을 추가
             quadrics[v1].Add(quadrics[v2]);
             quadrics[v2] = quadrics[v1];
             
-            // 정점 삭제
+            // 정점 삭제: v2 정점을 제거하면, 인덱스 값이 변경되므로 재매핑 필요
             obj.Vertices.RemoveAt(v2);
             obj.Normals.RemoveAt(v2);
             obj.UVs.RemoveAt(v2);
             
-            // 인덱스 재매핑
-            for (uint32& index : obj.VertexIndices) {
+            // 인덱스 재매핑: 삭제된 정점 v2에 해당하는 인덱스는 v1로, v2보다 큰 인덱스는 1씩 감소
+            for (auto& index : obj.VertexIndices) {
                 if (index == v2) index = v1;
-                if (index > v2) index--;
+                else if (index > v2) index--;
             }
         }
     }
 
 private:
+    // 간단한 엣지 축소 비용 계산 함수
+    // 실제 구현에서는 newPos^T * q * newPos 를 계산하는 방법이 더 정확하지만, 여기서는 q.data[9] 값을 사용합니다.
     static float ComputeCollapseCost(const Quadric& q1, const Quadric& q2, FVector& newPos) {
         Quadric q = q1;
         q.Add(q2);
-        
-        return q.data[9]; // 단순히 d*d 값 활용 (더 정교한 방법 가능)
+        return q.data[9];
     }
+    static bool CanMerge(const FVector& pos1, const FVector& pos2,
+              const FVector2D& uv1, const FVector2D& uv2,
+              float posThreshold = .01f,
+              float uvThreshold = 100.0f)
+    {
+        if ((pos1 - pos2).Magnitude() > posThreshold)
+            return false;
+        
+        if (std::abs(uv1.x - uv2.y) > uvThreshold || std::abs(uv1.y - uv2.y) > uvThreshold)
+            return false;
+    
+        return true;
+    }
+
 };

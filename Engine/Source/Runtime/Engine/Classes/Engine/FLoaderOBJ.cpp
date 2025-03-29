@@ -25,7 +25,13 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     // Parse OBJ
     FObjInfo NewObjInfo;
     bool Result = FLoaderOBJ::ParseOBJ(PathFileName, NewObjInfo);
+    wchar_t buffer[256];  // 메시지를 저장할 버퍼
+    swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
     QEMSimplifier::Simplify(NewObjInfo, NewObjInfo.Vertices.Num() * 0.5);
+    swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
+
     if (!Result)
     {
         delete NewStaticMesh;
