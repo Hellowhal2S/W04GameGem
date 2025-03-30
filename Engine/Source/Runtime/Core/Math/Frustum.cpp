@@ -96,6 +96,7 @@ void FFrustum::ConstructFrustum(const FMatrix& VP)
     }
 }
 
+// 안씀
 bool FFrustumPlane::IntersectAABB(const FBoundingBox& AABB) const
 {
     // AABB의 중심과 반경
@@ -112,6 +113,7 @@ bool FFrustumPlane::IntersectAABB(const FBoundingBox& AABB) const
     return DistanceToCenter + Radius >= 0;
 }
 
+// 안씀
 bool FFrustum::Intersect(const FBoundingBox& AABB) const
 {
     for (int i = 0; i < (int)EFrustumPlane::Count; ++i)
@@ -130,7 +132,7 @@ EFrustumContainment FFrustum::CheckContainment(const FBoundingBox& AABB) const
         const FFrustumPlane& Plane = Planes[i];
 
         // AABB의 중심과 반경
-        FVector Center = (AABB.min + AABB.max) * 0.5f;
+        FVector Center = (AABB.min + AABB.max) * 0.5f; 
         FVector Extents = (AABB.max - AABB.min) * 0.5f;
 
         float Radius =

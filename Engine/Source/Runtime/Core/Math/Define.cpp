@@ -13,17 +13,14 @@ FMatrix FMatrix::operator+(const FMatrix& Other) const
 {
 #if USE_SIMD
     FMatrix Result;
-    float* r = &Result.M[0][0];
 
-    __m128 row0 = SIMD::VecAdd(Row1SIMD(), Other.Row1SIMD());
-    __m128 row1 = SIMD::VecAdd(Row2SIMD(), Other.Row2SIMD());
-    __m128 row2 = SIMD::VecAdd(Row3SIMD(), Other.Row3SIMD());
-    __m128 row3 = SIMD::VecAdd(Row4SIMD(), Other.Row4SIMD());
-
-    _mm_storeu_ps(&r[0], row0);
-    _mm_storeu_ps(&r[4], row1);
-    _mm_storeu_ps(&r[8], row2);
-    _mm_storeu_ps(&r[12], row3);
+    for (int i = 0; i < 4; ++i)
+    {
+        __m128 a = _mm_loadu_ps(&M[i][0]);
+        __m128 b = _mm_loadu_ps(&Other.M[i][0]);
+        __m128 r = _mm_add_ps(a, b);
+        _mm_storeu_ps(&Result.M[i][0], r);
+    }
 
     return Result;
 #else
@@ -40,17 +37,14 @@ FMatrix FMatrix::operator-(const FMatrix& Other) const
 {
 #if USE_SIMD
     FMatrix Result;
-    float* r = &Result.M[0][0];
 
-    __m128 row0 = SIMD::VecSub(Row1SIMD(), Other.Row1SIMD());
-    __m128 row1 = SIMD::VecSub(Row2SIMD(), Other.Row2SIMD());
-    __m128 row2 = SIMD::VecSub(Row3SIMD(), Other.Row3SIMD());
-    __m128 row3 = SIMD::VecSub(Row4SIMD(), Other.Row4SIMD());
-
-    _mm_storeu_ps(&r[0], row0);
-    _mm_storeu_ps(&r[4], row1);
-    _mm_storeu_ps(&r[8], row2);
-    _mm_storeu_ps(&r[12], row3);
+    for (int i = 0; i < 4; ++i)
+    {
+        __m128 a = _mm_loadu_ps(&M[i][0]);
+        __m128 b = _mm_loadu_ps(&Other.M[i][0]);
+        __m128 r = _mm_sub_ps(a, b);
+        _mm_storeu_ps(&Result.M[i][0], r);
+    }
 
     return Result;
 #else
@@ -67,16 +61,29 @@ FMatrix FMatrix::operator*(const FMatrix& Other) const
 {
 #if USE_SIMD
     FMatrix Result;
+
+    __m128 b0 = _mm_loadu_ps(&Other.M[0][0]);  // Row 0
+    __m128 b1 = _mm_loadu_ps(&Other.M[1][0]);  // Row 1
+    __m128 b2 = _mm_loadu_ps(&Other.M[2][0]);  // Row 2
+    __m128 b3 = _mm_loadu_ps(&Other.M[3][0]);  // Row 3
+
     for (int i = 0; i < 4; ++i)
     {
-        __m128 row = RowSIMD(i);
+        __m128 a = _mm_loadu_ps(&M[i][0]);
 
-        for (int j = 0; j < 4; ++j)
-        {
-            __m128 col = Other.ColSIMD(j);
-            Result.M[i][j] = SIMD::Dot(row, col);
-        }
+        __m128 e0 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 0, 0, 0));
+        __m128 e1 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(1, 1, 1, 1));
+        __m128 e2 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(2, 2, 2, 2));
+        __m128 e3 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 3, 3, 3));
+
+        __m128 r = _mm_add_ps(
+            _mm_add_ps(_mm_mul_ps(e0, b0), _mm_mul_ps(e1, b1)),
+            _mm_add_ps(_mm_mul_ps(e2, b2), _mm_mul_ps(e3, b3))
+        );
+
+        _mm_storeu_ps(&Result.M[i][0], r);
     }
+
     return Result;
 #else
     FMatrix Result = {};
@@ -93,13 +100,14 @@ FMatrix FMatrix::operator*(float Scalar) const
 {
 #if USE_SIMD
     FMatrix Result;
-    float* r = &Result.M[0][0];
     __m128 scalar = _mm_set1_ps(Scalar);
 
-    _mm_storeu_ps(&r[0], _mm_mul_ps(Row1SIMD(), scalar));
-    _mm_storeu_ps(&r[4], _mm_mul_ps(Row2SIMD(), scalar));
-    _mm_storeu_ps(&r[8], _mm_mul_ps(Row3SIMD(), scalar));
-    _mm_storeu_ps(&r[12], _mm_mul_ps(Row4SIMD(), scalar));
+    for (int i = 0; i < 4; ++i)
+    {
+        __m128 row = _mm_loadu_ps(&M[i][0]);
+        __m128 r = _mm_mul_ps(row, scalar);
+        _mm_storeu_ps(&Result.M[i][0], r);
+    }
 
     return Result;
 #else
@@ -116,17 +124,17 @@ FMatrix FMatrix::operator/(float Scalar) const
 {
 #if USE_SIMD
     FMatrix Result;
-    float* r = &Result.M[0][0];
     __m128 scalar = _mm_set1_ps(Scalar);
 
-    _mm_storeu_ps(&r[0], _mm_div_ps(Row1SIMD(), scalar));
-    _mm_storeu_ps(&r[4], _mm_div_ps(Row2SIMD(), scalar));
-    _mm_storeu_ps(&r[8], _mm_div_ps(Row3SIMD(), scalar));
-    _mm_storeu_ps(&r[12], _mm_div_ps(Row4SIMD(), scalar));
+    for (int i = 0; i < 4; ++i)
+    {
+        __m128 row = _mm_loadu_ps(&M[i][0]);
+        __m128 r = _mm_div_ps(row, scalar);
+        _mm_storeu_ps(&Result.M[i][0], r);
+    }
 
     return Result;
 #else
-    FMatri
     FMatrix Result;
     for (int32 i = 0; i < 4; i++)
         for (int32 j = 0; j < 4; j++)
@@ -293,13 +301,31 @@ FMatrix FMatrix::CreateTranslationMatrix(const FVector& position)
 FVector FMatrix::TransformVector(const FVector& v, const FMatrix& m)
 {
 #if USE_SIMD
-    __m128 vec = SIMD::LoadVec3(v);
+    __m128 b0 = _mm_loadu_ps(&m.M[0][0]);  // Row 0
+    __m128 b1 = _mm_loadu_ps(&m.M[1][0]);  // Row 1
+    __m128 b2 = _mm_loadu_ps(&m.M[2][0]);  // Row 2
+    __m128 b3 = _mm_loadu_ps(&m.M[3][0]);  // Row 3
 
-    float x = SIMD::Dot(vec, m.Col1SIMD());
-    float y = SIMD::Dot(vec, m.Col2SIMD());
-    float z = SIMD::Dot(vec, m.Col3SIMD());
+    //__m128 a = _mm_set_ps(v.a, v.z, v.y, v.x);  // in = FVector4
+    __m128 a = SIMD::LoadVec3(v);
+    __m128 e0 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 0, 0, 0));
+    __m128 e1 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(1, 1, 1, 1));
+    __m128 e2 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(2, 2, 2, 2));
+    __m128 e3 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 3, 3, 3));
 
-    return FVector(x, y, z);
+    __m128 r = _mm_add_ps(
+        _mm_add_ps(_mm_mul_ps(e0, b0), _mm_mul_ps(e1, b1)),
+        _mm_add_ps(_mm_mul_ps(e2, b2), _mm_mul_ps(e3, b3))
+    );
+
+    FVector result;
+    alignas(16) float temp[4];
+    _mm_store_ps(temp, r);  // aligned store (빠름)
+
+    result.x = temp[0];
+    result.y = temp[1];
+    result.z = temp[2];
+    return result;
 #else
     FVector result;
 
@@ -315,14 +341,26 @@ FVector FMatrix::TransformVector(const FVector& v, const FMatrix& m)
 FVector4 FMatrix::TransformVector(const FVector4& v, const FMatrix& m)
 {
 #if USE_SIMD
-    __m128 vec = SIMD::LoadVec4(v);
+    __m128 b0 = _mm_loadu_ps(&m.M[0][0]);  // Row 0
+    __m128 b1 = _mm_loadu_ps(&m.M[1][0]);  // Row 1
+    __m128 b2 = _mm_loadu_ps(&m.M[2][0]);  // Row 2
+    __m128 b3 = _mm_loadu_ps(&m.M[3][0]);  // Row 3
 
-    float x = SIMD::Dot(vec, m.Col1SIMD());
-    float y = SIMD::Dot(vec, m.Col2SIMD());
-    float z = SIMD::Dot(vec, m.Col3SIMD());
-    float w = SIMD::Dot(vec, m.Col4SIMD());
+    //__m128 a = _mm_set_ps(v.a, v.z, v.y, v.x);  // in = FVector4
+    __m128 a = SIMD::LoadVec4(v);
+    __m128 e0 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 0, 0, 0));
+    __m128 e1 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(1, 1, 1, 1));
+    __m128 e2 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(2, 2, 2, 2));
+    __m128 e3 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 3, 3, 3));
 
-    return FVector4(x, y, z, w);
+    __m128 r = _mm_add_ps(
+        _mm_add_ps(_mm_mul_ps(e0, b0), _mm_mul_ps(e1, b1)),
+        _mm_add_ps(_mm_mul_ps(e2, b2), _mm_mul_ps(e3, b3))
+    );
+
+    FVector4 result;
+    SIMD::StoreVec4(r, result);
+    return result;
 #else
     FVector4 result;
     result.x = v.x * m.M[0][0] + v.y * m.M[1][0] + v.z * m.M[2][0] + v.a * m.M[3][0];

@@ -186,6 +186,7 @@
     <ClCompile Include="Engine\Source\Runtime\Core\HAL\PlatformMemory.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Frustum.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\JungleMath.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\SIMD\SimdUtility.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Vector.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.cpp" />
@@ -267,7 +268,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_UNICODE;UNICODE;</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <SDLCheck>true</SDLCheck>
-<AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
   $(ProjectDir)Engine\Source\ThirdParty\DirectXTK\Include;
   $(ProjectDir)Shaders;
   $(ProjectDir)Engine\Source\Runtime\InteractiveToolsFramework;
@@ -285,10 +286,10 @@
   $(ProjectDir);
   C:\vcpkg\installed\x64-windows\include
 </AdditionalIncludeDirectories>
-
       <AdditionalOptions>/utf-8 </AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LinkCompiled>true</LinkCompiled>
+      <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <ClCompile Include="Engine\Source\Runtime\Slate\Widgets\Layout\SSplitter.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\ResourceMgr.cpp" />
@@ -338,6 +339,7 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\Delegate.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\DelegateCombination.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Frustum.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\SIMD\SimdUtility.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
