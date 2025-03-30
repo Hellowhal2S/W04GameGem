@@ -196,6 +196,7 @@
     <ClCompile Include="Engine\Source\Editor\UnrealEd\EditorViewportClient.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\KDTree\KDTree.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\KDTree\KDTreeSystem.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Octree\Octree.cpp">
       <AssemblerOutput>NoListing</AssemblerOutput>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
@@ -345,6 +346,7 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\KDTree\KDTree.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\KDTree\KDTreeSystem.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Octree\Octree.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\ViewportClient.h" />
     <ClInclude Include="Engine\Source\Editor\LevelEditor\SLevelEditor.h" />

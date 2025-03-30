@@ -9,6 +9,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/LightComponent.h"
 #include "KDTree/KDTree.h"
+#include "KDTree/KDTreeSystem.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "Math/JungleMath.h"
 #include "Math/MathUtility.h"
@@ -179,8 +180,8 @@ void AEditorPlayer::TryPickActor()
     ++FStatRegistry::TotalPickCount;
 
     float ClosestDistance = FLT_MAX;
-    //UPrimitiveComponent* Closest = GetEngine().GetWorld()->SceneOctree->Raycast(Ray, ClosestDistance);
-    UPrimitiveComponent* Closest = GetEngine().GetWorld()->SceneKDTree->Raycast(Ray, ClosestDistance);
+    UPrimitiveComponent* Closest = GetEngine().GetWorld()->SceneOctree->Raycast(Ray, ClosestDistance);
+    //UPrimitiveComponent* Closest = GetEngine().GetWorld()->SceneKDTreeSystem->Raycast(Ray, ClosestDistance);
 
     if (Closest)
     {

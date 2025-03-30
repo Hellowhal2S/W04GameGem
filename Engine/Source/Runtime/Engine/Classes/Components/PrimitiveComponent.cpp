@@ -101,5 +101,5 @@ void UPrimitiveComponent::UpdateWorldAABB()
 {
     FMatrix ModelMatrix = GetOwner()->GetModelMatrix();
     WorldAABB = JungleMath::TransformAABB(AABB, ModelMatrix);
-    
+    BoundingSphere = WorldAABB.GetBoundingSphere(false);
 }

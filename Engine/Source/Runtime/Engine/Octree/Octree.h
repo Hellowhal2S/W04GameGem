@@ -33,7 +33,10 @@ public:
     uint64 VertexBufferSizeInBytes = 0;
     uint64 IndexBufferSizeInBytes = 0;
     FBoundingBox Bounds;
+    FSphere BoundingSphere;
+
     TArray<UPrimitiveComponent*> Components;
+    TArray<UPrimitiveComponent*> OverlappingComponents;
     FOctreeNode* Children[8] = {nullptr};
     bool bIsLeaf = true;
     int Depth = 0;
@@ -52,6 +55,8 @@ public:
 
     //재귀적으로 Components를 적절한 노드에 추가
     void Insert(UPrimitiveComponent* Component, int MaxDepth = 5);
+    void InsertOverlapping(UPrimitiveComponent* Component, int MaxDepth=3);
+
     //Octree를 순회하면서 렌더할 오브젝트 결정. 하지만 현재 사용 X
     void Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
     //Lazy Segtree에서 사용. FrameThreshold프레임만큼 사용하지 않은 버퍼 할당 해제. 현재 사용 X

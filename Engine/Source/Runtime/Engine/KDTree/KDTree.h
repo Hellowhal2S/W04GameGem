@@ -38,6 +38,7 @@ class FKDTree
 public:
     FKDTree();
     ~FKDTree();
+    TArray<UStaticMeshComponent*> PendingComponents; // 각 SubTree에 의해 분배된 컴포넌트
 
     void Build();
     UStaticMeshComponent* Raycast(const FRay& Ray, float& OutDistance) const;

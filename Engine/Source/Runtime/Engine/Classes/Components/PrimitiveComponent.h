@@ -20,6 +20,7 @@ public:
 
     FBoundingBox AABB;
     FBoundingBox WorldAABB;
+    FSphere BoundingSphere;
     void UpdateWorldAABB();
 
 private:

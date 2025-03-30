@@ -106,13 +106,9 @@ int UStaticMeshComponent::CheckRayIntersection(const FVector& rayOrigin, const F
     // StaticMesh 없는 경우 바로 반환
     if (!staticMesh) return 0;
 
-    // 월드에서의 구 중심과 반지름 계산
-    const FVector Center = GetWorldLocation();       // AABB나 Transform 기준으로 정확하게 설정해도 됨
-    const float Radius = GetWorldScale().y * 0.45f;   // 사과가 유니폼 스케일이라면 x만 사용해도 OK
-
-    // 교차 여부 검사
+    // 월드 스페이스 구와 레이의 교차 판정
     float hitDist = 0.f;
-    if (IntersectRaySphere(rayOrigin, rayDirection, Center, Radius, hitDist))
+    if (IntersectRaySphere(rayOrigin, rayDirection, BoundingSphere, hitDist))
     {
         pfNearHitDistance = hitDist;
         return 1;

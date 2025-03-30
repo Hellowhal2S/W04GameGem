@@ -76,15 +76,18 @@ inline bool RayIntersectsAABB(const FRay& Ray, const FBoundingBox& Box, float& O
     OutHitDistance = tMin;
     return true;
 }
-inline bool IntersectRaySphere(const FVector& rayOrigin, const FVector& rayDir, const FVector& sphereCenter, float radius, float& outDist)
+inline bool IntersectRaySphere(const FVector& rayOrigin, const FVector& rayDir, const FSphere& sphere, float& outDist)
 {
-    FVector oc = rayOrigin - sphereCenter;
-    float a = rayDir.Dot(rayDir);
+    const FVector& center = sphere.Center;
+    float radius = sphere.Radius;
+
+    FVector oc = rayOrigin - center;
+    float a = rayDir.Dot(rayDir);                      // 일반적으로 Normalize되어 있어서 1
     float b = 2.0f * oc.Dot(rayDir);
     float c = oc.Dot(oc) - radius * radius;
     float discriminant = b * b - 4 * a * c;
 
-    if (discriminant < 0)
+    if (discriminant < 0.0f)
         return false;
 
     float sqrtDisc = sqrtf(discriminant);

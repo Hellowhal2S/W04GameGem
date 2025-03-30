@@ -23,20 +23,10 @@ FKDTreeNode::~FKDTreeNode()
 
 void FKDTree::Build()
 {
-	TArray<UStaticMeshComponent*> AllComponents;
-	for (USceneComponent* Comp : TObjectRange<USceneComponent>())
-	{
-		if (auto* Prim = Cast<UStaticMeshComponent>(Comp))
-		{
-			Prim->UpdateWorldAABB();
-			AllComponents.Add(Prim);
-		}
-	}
-
-	if (!AllComponents.IsEmpty())
+	if (!PendingComponents.IsEmpty())
 	{
 		Root = new FKDTreeNode();
-		Root->Build(AllComponents);
+		Root->Build(PendingComponents);
 	}
 }
 

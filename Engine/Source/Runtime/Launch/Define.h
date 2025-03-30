@@ -246,6 +246,28 @@ struct FRect
     float leftTopX, leftTopY, width, height;
 };
 
+struct FSphere
+{
+    FVector Center;
+    float Radius;
+
+    FSphere()
+        : Center(FVector::ZeroVector)
+        , Radius(0.0f)
+    {
+    }
+
+    FSphere(const FVector& InCenter, float InRadius)
+        : Center(InCenter)
+        , Radius(InRadius)
+    {
+    }
+    bool Overlaps(const FSphere& Sphere) const
+    {
+        return (Center-Sphere.Center).Magnitude()<Radius+Sphere.Radius;
+    }
+};
+
 struct FPoint
 {
     FPoint()
@@ -385,6 +407,18 @@ struct FBoundingBox
             Other.min.z > max.z || Other.max.z < min.z);
     }
 
+    bool Overlaps(const FSphere& Sphere) const
+    {
+        float dmin = 0.0f;
+        for (int i = 0; i < 3; i++)
+        {
+            float c = Sphere.Center[i];
+            if (c < min[i]) dmin += (c - min[i]) * (c - min[i]);
+            else if (c > max[i]) dmin += (c - max[i]) * (c - max[i]);
+        }
+        return dmin <= (Sphere.Radius * Sphere.Radius);
+    }
+
     FVector GetCenter() const
     {
         return (min + max) * 0.5f;
@@ -417,6 +451,17 @@ struct FBoundingBox
             FMath::Max(A.max.z, B.max.z)
         };
         return FBoundingBox(Min, Max);
+    }
+    inline FSphere GetBoundingSphere(bool bUseMaxExtent = true) const
+    {
+        FVector Center = (min + max) * 0.5f;
+        FVector Extent = max - Center;
+
+        float Radius = bUseMaxExtent 
+            ? Extent.Magnitude()                      // 가장 먼 꼭짓점까지의 거리
+            : FMath::Min(FMath::Min(Extent.x, Extent.y), Extent.z); // 가장 짧은 반축을 반지름으로
+
+        return FSphere(Center, Radius);
     }
 };
 

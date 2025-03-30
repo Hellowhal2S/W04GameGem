@@ -11,6 +11,7 @@
 #include "Components/SkySphereComponent.h"
 #include "Components/SphereComp.h"
 #include "KDTree/KDTree.h"
+#include "KDTree/KDTreeSystem.h"
 #include "Octree/Octree.h"
 #include "Math/Frustum.h"
 #include "Math/JungleMath.h"
@@ -27,8 +28,8 @@ void UWorld::Initialize()
     CreateBaseObject();
     FStatRegistry::RegisterResult(Timer); 
     BuildOctree();
-    SceneKDTree = new FKDTree();
-    SceneKDTree->Build();
+    SceneKDTreeSystem = new FKDTreeSystem();
+    SceneKDTreeSystem->Build(SceneOctree->GetRoot()->Bounds);
 }
 
 void UWorld::CreateBaseObject()
@@ -204,7 +205,7 @@ void UWorld::RenderHighlightedComponent(FRenderer& Renderer, const FMatrix& VP)
     FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
         HighlightedMeshComp->GetWorldLocation(),
         HighlightedMeshComp->GetWorldRotation(),
-        HighlightedMeshComp->GetWorldScale()*1.01f
+        HighlightedMeshComp->GetWorldScale()*1.05f
     );
 
     FMatrix MVP = ModelMatrix * VP;

@@ -42,6 +42,7 @@ FOctreeNode::FOctreeNode(const FBoundingBox& InBounds, int InDepth)
     : Bounds(InBounds)
     , Depth(InDepth)
 {
+    BoundingSphere = Bounds.GetBoundingSphere(true);
 }
 
 FOctreeNode::~FOctreeNode()
@@ -65,7 +66,6 @@ FOctreeNode::~FOctreeNode()
         Batch.Indices.Empty();
         Batch.Vertices.ShrinkToFit();
         Batch.Indices.ShrinkToFit();
-        
     }
 }
 
@@ -118,6 +118,29 @@ void FOctreeNode::Insert(UPrimitiveComponent* Component, int MaxDepth)
     Components.Add(Component);
 }
 
+void FOctreeNode::InsertOverlapping(UPrimitiveComponent* Component, int MaxDepth)
+{
+    const FSphere WorldSphere = Component->BoundingSphere;
+    const FBoundingBox CompBound = Component->WorldAABB;
+    if (!Bounds.Overlaps(CompBound))
+        return;
+
+    if (Depth >= MaxDepth || bIsLeaf)
+    {
+        OverlappingComponents.Add(Component);
+        return;
+    }
+
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i]&&Children[i]->Bounds.Overlaps(CompBound))
+        //if (Children[i] && Children[i]->BoundingSphere.Overlaps(WorldSphere))
+        {
+            Children[i]->InsertOverlapping(Component, MaxDepth);
+        }
+    }
+}
+
 void FOctreeNode::Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const
 {
     if (!Frustum.Intersect(Bounds)) return;
@@ -156,6 +179,7 @@ void FOctree::Build()
         {
             PrimComp->UpdateWorldAABB();
             Root->Insert(PrimComp);
+            Root->InsertOverlapping(PrimComp);
         }
     }
 }
@@ -164,33 +188,36 @@ void FOctree::QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>
 {
     Root->Query(Frustum, OutResults);
 }
+
 UPrimitiveComponent* FOctree::Raycast(const FRay& Ray, float& OutHitDistance) const
 {
     if (!Root) return nullptr;
     return Root->Raycast(Ray, OutHitDistance);
 }
 
+/*
 // Octree에서 Ray와 충돌한 가장 가까운 Component를 찾는 함수
 UPrimitiveComponent* FOctreeNode::Raycast(const FRay& Ray, float& OutDistance) const
 {
     float NodeHitDist;
-    if (!RayIntersectsAABB(Ray, Bounds, NodeHitDist))
-        return nullptr;
+    if (!RayIntersectsAABB(Ray, Bounds, NodeHitDist))return nullptr;
 
     UPrimitiveComponent* ClosestComponent = nullptr;
     float ClosestDistance = FLT_MAX;
 
-    // Leaf 노드이면 컴포넌트 검사
     if (bIsLeaf)
     {
-        for (UPrimitiveComponent* Comp : Components)
+        for (UPrimitiveComponent* Comp : OverlappingComponents)
         {
-            float HitDist = 0;
-            int Intersect = Comp->CheckRayIntersection(Ray.Origin, Ray.Direction, HitDist);
-            if (Intersect > 0 && HitDist < ClosestDistance)
+            float HitDist = 0.0f;
+
+            if (IntersectRaySphere(Ray.Origin, Ray.Direction, Comp->BoundingSphere, HitDist))
             {
-                ClosestComponent = Comp;
-                ClosestDistance = HitDist;
+                if (HitDist < ClosestDistance)
+                {
+                    ClosestComponent = Comp;
+                    ClosestDistance = HitDist;
+                }
             }
         }
     }
@@ -214,6 +241,54 @@ UPrimitiveComponent* FOctreeNode::Raycast(const FRay& Ray, float& OutDistance) c
     OutDistance = ClosestDistance;
     return ClosestComponent;
 }
+*/
+
+UPrimitiveComponent* FOctreeNode::Raycast(const FRay& Ray, float& OutDistance) const
+{
+    float NodeHitDist;
+    if (!RayIntersectsAABB(Ray, Bounds, NodeHitDist)) return nullptr;
+    //if (!IntersectRaySphere(Ray.Origin, Ray.Direction, BoundingSphere, NodeHitDist)) return nullptr;
+
+    UPrimitiveComponent* ClosestComponent = nullptr;
+    float ClosestDistance = FLT_MAX;
+
+    // 1. Leaf Node → OverlappingComponents 검사
+    if (bIsLeaf)
+    {
+        for (UPrimitiveComponent* Comp : OverlappingComponents)
+        {
+            float HitDist = 0.0f;
+            if (IntersectRaySphere(Ray.Origin, Ray.Direction, Comp->BoundingSphere, HitDist))
+            {
+                if (HitDist < ClosestDistance)
+                {
+                    ClosestDistance = HitDist;
+                    ClosestComponent = Comp;
+                }
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            if (Children[i])
+            {
+                float ChildHitDist = FLT_MAX;
+                UPrimitiveComponent* HitComp = Children[i]->Raycast(Ray, ChildHitDist);
+                if (HitComp && ChildHitDist < ClosestDistance)
+                {
+                    ClosestComponent = HitComp;
+                    ClosestDistance = ChildHitDist;
+                }
+            }
+        }
+    }
+
+    OutDistance = ClosestDistance;
+    return ClosestComponent;
+}
+
 
 void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node, int MaxDepth)
 {
