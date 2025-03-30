@@ -4,6 +4,11 @@
 #include "Core/Math/Vector.h"
 #include "Core/Math/Vector4.h"
 
+__m128 SIMD::LoadVec3(const FVector& v)
+{
+    return _mm_set_ps(0.f, v.z, v.y, v.x);
+}
+
 __m128 SIMD::LoadVec4(const FVector4& v)
 {
     return _mm_set_ps(v.a, v.z, v.y, v.x);

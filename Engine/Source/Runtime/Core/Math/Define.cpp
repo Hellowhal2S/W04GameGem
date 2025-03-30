@@ -9,49 +9,130 @@ const FMatrix FMatrix::Identity = { {
 } };
 
 // 행렬 덧셈
-FMatrix FMatrix::operator+(const FMatrix& Other) const {
+FMatrix FMatrix::operator+(const FMatrix& Other) const 
+{
+#if USE_SIMD
+    FMatrix Result;
+    float* r = &Result.M[0][0];
+
+    __m128 row0 = SIMD::VecAdd(Row1SIMD(), Other.Row1SIMD());
+    __m128 row1 = SIMD::VecAdd(Row2SIMD(), Other.Row2SIMD());
+    __m128 row2 = SIMD::VecAdd(Row3SIMD(), Other.Row3SIMD());
+    __m128 row3 = SIMD::VecAdd(Row4SIMD(), Other.Row4SIMD());
+
+    _mm_storeu_ps(&r[0], row0);
+    _mm_storeu_ps(&r[4], row1);
+    _mm_storeu_ps(&r[8], row2);
+    _mm_storeu_ps(&r[12], row3);
+
+    return Result;
+#else
     FMatrix Result;
     for (int32 i = 0; i < 4; i++)
         for (int32 j = 0; j < 4; j++)
             Result.M[i][j] = M[i][j] + Other.M[i][j];
     return Result;
+#endif
 }
 
 // 행렬 뺄셈
-FMatrix FMatrix::operator-(const FMatrix& Other) const {
+FMatrix FMatrix::operator-(const FMatrix& Other) const 
+{
+#if USE_SIMD
+    FMatrix Result;
+    float* r = &Result.M[0][0];
+
+    __m128 row0 = SIMD::VecSub(Row1SIMD(), Other.Row1SIMD());
+    __m128 row1 = SIMD::VecSub(Row2SIMD(), Other.Row2SIMD());
+    __m128 row2 = SIMD::VecSub(Row3SIMD(), Other.Row3SIMD());
+    __m128 row3 = SIMD::VecSub(Row4SIMD(), Other.Row4SIMD());
+
+    _mm_storeu_ps(&r[0], row0);
+    _mm_storeu_ps(&r[4], row1);
+    _mm_storeu_ps(&r[8], row2);
+    _mm_storeu_ps(&r[12], row3);
+
+    return Result;
+#else
     FMatrix Result;
     for (int32 i = 0; i < 4; i++)
         for (int32 j = 0; j < 4; j++)
             Result.M[i][j] = M[i][j] - Other.M[i][j];
     return Result;
+#endif
 }
 
 // 행렬 곱셈
-FMatrix FMatrix::operator*(const FMatrix& Other) const {
+FMatrix FMatrix::operator*(const FMatrix& Other) const 
+{
+#if USE_SIMD
+    FMatrix Result;
+    for (int i = 0; i < 4; ++i)
+    {
+        __m128 row = RowSIMD(i);
+
+        for (int j = 0; j < 4; ++j)
+        {
+            __m128 col = Other.ColSIMD(j);
+            Result.M[i][j] = SIMD::Dot(row, col);
+        }
+    }
+    return Result;
+#else
     FMatrix Result = {};
     for (int32 i = 0; i < 4; i++)
         for (int32 j = 0; j < 4; j++)
             for (int32 k = 0; k < 4; k++)
                 Result.M[i][j] += M[i][k] * Other.M[k][j];
     return Result;
+#endif
 }
 
 // 스칼라 곱셈
-FMatrix FMatrix::operator*(float Scalar) const {
+FMatrix FMatrix::operator*(float Scalar) const 
+{
+#if USE_SIMD
+    FMatrix Result;
+    float* r = &Result.M[0][0];
+    __m128 scalar = _mm_set1_ps(Scalar);
+
+    _mm_storeu_ps(&r[0], _mm_mul_ps(Row1SIMD(), scalar));
+    _mm_storeu_ps(&r[4], _mm_mul_ps(Row2SIMD(), scalar));
+    _mm_storeu_ps(&r[8], _mm_mul_ps(Row3SIMD(), scalar));
+    _mm_storeu_ps(&r[12], _mm_mul_ps(Row4SIMD(), scalar));
+
+    return Result;
+#else
     FMatrix Result;
     for (int32 i = 0; i < 4; i++)
         for (int32 j = 0; j < 4; j++)
             Result.M[i][j] = M[i][j] * Scalar;
     return Result;
+#endif
 }
 
 // 스칼라 나눗셈
-FMatrix FMatrix::operator/(float Scalar) const {
+FMatrix FMatrix::operator/(float Scalar) const 
+{
+#if USE_SIMD
+    FMatrix Result;
+    float* r = &Result.M[0][0];
+    __m128 scalar = _mm_set1_ps(Scalar);
+
+    _mm_storeu_ps(&r[0], _mm_div_ps(Row1SIMD(), scalar));
+    _mm_storeu_ps(&r[4], _mm_div_ps(Row2SIMD(), scalar));
+    _mm_storeu_ps(&r[8], _mm_div_ps(Row3SIMD(), scalar));
+    _mm_storeu_ps(&r[12], _mm_div_ps(Row4SIMD(), scalar));
+
+    return Result;
+#else
+    FMatri
     FMatrix Result;
     for (int32 i = 0; i < 4; i++)
         for (int32 j = 0; j < 4; j++)
             Result.M[i][j] = M[i][j] / Scalar;
     return Result;
+#endif
 }
 
 float* FMatrix::operator[](int row) {
@@ -64,12 +145,31 @@ const float* FMatrix::operator[](int row) const
 }
 
 // 전치 행렬
-FMatrix FMatrix::Transpose(const FMatrix& Mat) {
+FMatrix FMatrix::Transpose(const FMatrix& Mat) 
+{
+#if USE_SIMD
+    FMatrix Result;
+
+    __m128 row0 = _mm_loadu_ps(&Mat.M[0][0]);
+    __m128 row1 = _mm_loadu_ps(&Mat.M[1][0]);
+    __m128 row2 = _mm_loadu_ps(&Mat.M[2][0]);
+    __m128 row3 = _mm_loadu_ps(&Mat.M[3][0]);
+
+    _MM_TRANSPOSE4_PS(row0, row1, row2, row3);
+
+    _mm_storeu_ps(&Result.M[0][0], row0);
+    _mm_storeu_ps(&Result.M[1][0], row1);
+    _mm_storeu_ps(&Result.M[2][0], row2);
+    _mm_storeu_ps(&Result.M[3][0], row3);
+
+    return Result;
+#else
     FMatrix Result;
     for (int32 i = 0; i < 4; i++)
         for (int32 j = 0; j < 4; j++)
             Result.M[i][j] = Mat.M[j][i];
     return Result;
+#endif
 }
 
 // 행렬식 계산 (라플라스 전개, 4x4 행렬)
@@ -189,28 +289,47 @@ FMatrix FMatrix::CreateTranslationMatrix(const FVector& position)
     return translationMatrix;
 }
 
+// TODO 이거 w = 0으로 처리 하면 안될거같은데
 FVector FMatrix::TransformVector(const FVector& v, const FMatrix& m)
 {
+#if USE_SIMD
+    __m128 vec = SIMD::LoadVec3(v);
+
+    float x = SIMD::Dot(vec, m.Col1SIMD());
+    float y = SIMD::Dot(vec, m.Col2SIMD());
+    float z = SIMD::Dot(vec, m.Col3SIMD());
+
+    return FVector(x, y, z);
+#else
     FVector result;
 
     // 4x4 행렬을 사용하여 벡터 변환 (W = 0으로 가정, 방향 벡터)
     result.x = v.x * m.M[0][0] + v.y * m.M[1][0] + v.z * m.M[2][0] + 0.0f * m.M[3][0];
     result.y = v.x * m.M[0][1] + v.y * m.M[1][1] + v.z * m.M[2][1] + 0.0f * m.M[3][1];
     result.z = v.x * m.M[0][2] + v.y * m.M[1][2] + v.z * m.M[2][2] + 0.0f * m.M[3][2];
-
-
     return result;
+#endif
 }
 
 // FVector4를 변환하는 함수
 FVector4 FMatrix::TransformVector(const FVector4& v, const FMatrix& m)
 {
+#if USE_SIMD
+    __m128 vec = SIMD::LoadVec4(v);
+
+    float x = SIMD::Dot(vec, m.Col1SIMD());
+    float y = SIMD::Dot(vec, m.Col2SIMD());
+    float z = SIMD::Dot(vec, m.Col3SIMD());
+    float w = SIMD::Dot(vec, m.Col4SIMD());
+
+    return FVector4(x, y, z, w);
+#else
     FVector4 result;
     result.x = v.x * m.M[0][0] + v.y * m.M[1][0] + v.z * m.M[2][0] + v.a * m.M[3][0];
     result.y = v.x * m.M[0][1] + v.y * m.M[1][1] + v.z * m.M[2][1] + v.a * m.M[3][1];
     result.z = v.x * m.M[0][2] + v.y * m.M[1][2] + v.z * m.M[2][2] + v.a * m.M[3][2];
     result.a = v.x * m.M[0][3] + v.y * m.M[1][3] + v.z * m.M[2][3] + v.a * m.M[3][3];
+
     return result;
+#endif
 }
-
-

@@ -46,7 +46,7 @@ struct FVector
 #if USE_SIMD
         __m128 a = SIMD::LoadVec3(x, y, z);
         __m128 b = SIMD::LoadVec3(other.x, other.y, other.z);
-        __m128 result = SIMD::Sub(a, b);
+        __m128 result = SIMD::VecSub(a, b);
         //return SIMD::ToFVector(result);
         float f[3];
         SIMD::StoreVec3(result, f);
@@ -61,7 +61,7 @@ struct FVector
 #if USE_SIMD
         __m128 a = SIMD::LoadVec3(x, y, z);
         __m128 b = SIMD::LoadVec3(other.x, other.y, other.z);
-        __m128 result = SIMD::Add(a, b);
+        __m128 result = SIMD::VecAdd(a, b);
         //return SIMD::ToFVector(result);f
         float f[3];
         SIMD::StoreVec3(result, f);
@@ -126,7 +126,7 @@ struct FVector
 #if USE_SIMD
         __m128 vec = SIMD::LoadVec3(x, y, z);
         __m128 scale = _mm_set1_ps(scalar);
-        __m128 result = SIMD::Mul(vec, scale);
+        __m128 result = SIMD::VecMul(vec, scale);
         float f[3];
         SIMD::StoreVec3(result, f);
         return FVector(f[0], f[1], f[2]);
@@ -175,7 +175,7 @@ inline FVector FVector::operator/(const FVector& Other) const
 #if USE_SIMD
     __m128 a = SIMD::LoadVec3(x, y, z);
     __m128 b = SIMD::LoadVec3(Other.x, Other.y, Other.z);
-    __m128 result = SIMD::DivCorrect(a, b);
+    __m128 result = SIMD::VecDivCorrect(a, b);
     float f[3];
     SIMD::StoreVec3(result, f);
     return FVector(f[0], f[1], f[2]);
@@ -189,7 +189,7 @@ inline FVector FVector::operator/(float Scalar) const
 #if USE_SIMD
     __m128 vec = SIMD::LoadVec3(x, y, z);
     __m128 scale = _mm_set1_ps(Scalar);
-    __m128 result = SIMD::DivCorrect(vec, scale);
+    __m128 result = SIMD::VecDivCorrect(vec, scale);
     float f[3];
     SIMD::StoreVec3(result, f);
     return FVector(f[0], f[1], f[2]);
@@ -203,7 +203,7 @@ inline FVector& FVector::operator/=(float Scalar)
 #if USE_SIMD
     __m128 vec = SIMD::LoadVec3(x, y, z);
     __m128 scalarVec = _mm_set1_ps(Scalar);
-    __m128 result = SIMD::DivCorrect(vec, scalarVec);
+    __m128 result = SIMD::VecDivCorrect(vec, scalarVec);
     float f[3];
     SIMD::StoreVec3(result, f);
     x = f[0]; y = f[1]; z = f[2];

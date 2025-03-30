@@ -10,38 +10,39 @@ struct FVector4;
 
 namespace SIMD
 {
+#pragma
     // FVector Add (x, y, z)
-    inline __m128 Add(const __m128& a, const __m128& b)
+    inline __m128 VecAdd(const __m128& a, const __m128& b)
     {
         return _mm_add_ps(a, b);
     }
 
     // FVector Sub
-    inline __m128 Sub(const __m128& a, const __m128& b)
+    inline __m128 VecSub(const __m128& a, const __m128& b)
     {
         return _mm_sub_ps(a, b);
     }
 
     // FVector Mul
-    inline __m128 Mul(const __m128& a, const __m128& b)
+    inline __m128 VecMul(const __m128& a, const __m128& b)
     {
         return _mm_mul_ps(a, b);
     }
     
     // FVector Div
-    inline __m128 DivSlow(const __m128& a, const __m128& b)
+    inline __m128 VecDivSlow(const __m128& a, const __m128& b)
     {
         return _mm_div_ps(a, b);
     }
 
     // Fast but, approximation
-    inline __m128 DivFast(const __m128& a, const __m128& b)
+    inline __m128 VecDivFast(const __m128& a, const __m128& b)
     {
         __m128 rcp = _mm_rcp_ps(b);
         return _mm_mul_ps(a, rcp);
     }
 
-    inline __m128 DivCorrect(const __m128& a, const __m128& b)
+    inline __m128 VecDivCorrect(const __m128& a, const __m128& b)
     {
         __m128 rcp = _mm_rcp_ps(b); // 근사 역수
         __m128 two = _mm_set1_ps(2.0f);
@@ -52,7 +53,7 @@ namespace SIMD
     // FVector Dot
     inline float Dot(const __m128& a, const __m128& b)
     {
-        return _mm_cvtss_f32(_mm_dp_ps(a, b, 0x71));
+        return _mm_cvtss_f32(_mm_dp_ps(a, b, 0xFF));
     }
 
     // FVector Cross
@@ -80,7 +81,7 @@ namespace SIMD
         return _mm_set_ps(w, z, y, x);
     }
 
-
+    __m128 LoadVec3(const FVector& v);
     __m128 LoadVec4(const FVector4& v);
 
     //FVector SIMD::ToFVector(const __m128& v)
@@ -149,4 +150,6 @@ namespace SIMD
 
     // SoA -> AoS 변환
     void ConvertSoAToAoS(const FVector4SoA& src, FVector4* dst);
+
+
 }
