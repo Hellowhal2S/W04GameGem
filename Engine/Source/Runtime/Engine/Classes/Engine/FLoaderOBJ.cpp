@@ -30,12 +30,15 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     MessageBox(nullptr, buffer, L"오류", MB_OK);
     swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.VertexIndices.Num());
     MessageBox(nullptr, buffer, L"오류", MB_OK);
-    QEMSimplifier::Simplify(NewObjInfo, NewObjInfo.Vertices.Num() * 0.999);
+    QEMSimplifier::Simplify(NewObjInfo, NewObjInfo.Vertices.Num() * 0.8);
     swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
     MessageBox(nullptr, buffer, L"오류", MB_OK);
     swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.VertexIndices.Num());
     MessageBox(nullptr, buffer, L"오류", MB_OK);
-
+    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.Normals.Num());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
+    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.UVs.Num());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
     if (!Result)
     {
         delete NewStaticMesh;
