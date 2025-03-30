@@ -494,8 +494,8 @@ struct EdgeCollapse {
 // 임계값은 상황에 맞게 조정
 static bool CanMerge(const FVector& pos1, const FVector& pos2,
                      const FVector2D& uv1, const FVector2D& uv2,
-                     float posThreshold = 0.1f,
-                     float uvThreshold = 1.0f)
+                     float posThreshold = 10.f,
+                     float uvThreshold = 10.0f)
 {
     if ((pos1 - pos2).Magnitude() > posThreshold)
         return false;
@@ -603,15 +603,15 @@ public:
             FVector2D uv_v1 = obj.UVs[t1];
             FVector2D uv_v2 = obj.UVs[t2];
             
-            obj.Vertices[v1] = (oldPos_v1 + oldPos_v2) * .5f;
-            obj.Normals[n1] = (normal_v1 + normal_v2) * 0.5f;
-            obj.Normals[n1] = obj.Normals[n1].Normalize();
-            
-            
-            float totalDist = (oldPos_v2 - oldPos_v1).Magnitude();
-            float movedDist = (bestCollapse.newPos - oldPos_v1).Magnitude();
-            float t = (totalDist > 1e-6f) ? (movedDist / totalDist) : 0.5f;
-            obj.UVs[t1] =  FVector2D::Lerp(uv_v1, uv_v2, t);
+            // obj.Vertices[v1] = (oldPos_v1 + oldPos_v2) * .5f;
+            // obj.Normals[n1] = (normal_v1 + normal_v2) * 0.5f;
+            // obj.Normals[n1] = obj.Normals[n1].Normalize();
+            //
+            //
+            // float totalDist = (oldPos_v2 - oldPos_v1).Magnitude();
+            // float movedDist = (bestCollapse.newPos - oldPos_v1).Magnitude();
+            // float t = (totalDist > 1e-6f) ? (movedDist / totalDist) : 0.5f;
+            // obj.UVs[t1] =  FVector2D::Lerp(uv_v1, uv_v2, t);
             // obj.UVs[t1] =  uv_v1;
 
             
@@ -731,6 +731,19 @@ private:
     static float ComputeCollapseCost(const Quadric& q1, const Quadric& q2, FVector& newPos) {
         Quadric q = q1;
         q.Add(q2);
-        return q.data[9];
+
+        // 4D 벡터 확장: newPos = (x, y, z, 1)
+        float x = newPos.x;
+        float y = newPos.y;
+        float z = newPos.z;
+
+        // newPos^T * Q * newPos 계산
+        float cost =
+            q.data[0] * x * x + 2.0f * q.data[1] * x * y + 2.0f * q.data[2] * x * z + 2.0f * q.data[3] * x +  
+            q.data[4] * y * y + 2.0f * q.data[5] * y * z + 2.0f * q.data[6] * y +
+            q.data[7] * z * z + 2.0f * q.data[8] * z +
+            q.data[9];  // d*d 항
+
+        return cost;
     }
 };
