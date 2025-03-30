@@ -18,6 +18,7 @@
 #include "Profiling/PlatformTime.h"
 #include "Profiling/StatRegistry.h"
 #include "UnrealEd/PrimitiveBatch.h"
+#include "UnrealEd/SceneMgr.h"
 #include "UObject/UObjectIterator.h"
 
 
@@ -228,42 +229,9 @@ void UWorld::RenderHighlightedComponent(FRenderer& Renderer, const FMatrix& VP)
 }
 void UWorld::BuildOctree()
 {
-    FScopeCycleCounter Timer("BuildOctree");
-    FVector MinBound = FVector(FLT_MAX,FLT_MAX,FLT_MAX);
-    FVector MaxBound = FVector(-FLT_MAX,-FLT_MAX,-FLT_MAX);
-    for (const auto* SceneComp : TObjectRange<USceneComponent>())
-    {
-        if (const auto* MeshComp = Cast<UMeshComponent>(SceneComp))
-        {
-            //const FBoundingBox& AABB = MeshComp->AABB;
-            //FBoundingBox WorldAABB = JungleMath::TransformAABB(AABB, SceneComp->GetOwner()->GetModelMatrix());
-            auto *PrimComp = Cast<UPrimitiveComponent>(MeshComp);
-            PrimComp->UpdateWorldAABB();
-            FBoundingBox WorldAABB = MeshComp->WorldAABB;
-            MinBound = FVector::Min(MinBound, WorldAABB.min);
-            MaxBound = FVector::Max(MaxBound, WorldAABB.max);
-        }
-    }
-    FVector Center = (MinBound + MaxBound) * 0.5f;
-    FVector Extents = (MaxBound - MinBound) * 0.5f;
-
-    // 가장 긴 축의 길이 기준
-    float MaxExtent = FMath::Max(Extents.x, FMath::Max(Extents.y, Extents.z));
-
-    // 정육면체 범위
-    FVector CubeExtent(MaxExtent, MaxExtent, MaxExtent);
-    FVector CubeMin = Center - CubeExtent;
-    FVector CubeMax = Center + CubeExtent;
-
-    //FBoundingBox WorldBounds = FBoundingBox(CubeMin, CubeMax);
-    FBoundingBox WorldBounds = FBoundingBox(MinBound, MaxBound);
-    delete SceneOctree;
-    SceneOctree = new FOctree(WorldBounds);
-    SceneOctree->Build(); // 모든 컴포넌트 삽입
-    SceneOctree->GetRoot()->BuildBatchRenderData();   // 2단계: 머티리얼 기준 정점 수집
-    SceneOctree->GetRoot()->BuildBatchBuffers(FEngineLoop::renderer);
-    SceneOctree->GetRoot()->ClearBatchDatas(FEngineLoop::renderer);
-    FStatRegistry::RegisterResult(Timer); 
+    if (SceneOctree) delete SceneOctree;
+    SceneOctree = new FOctree(FBoundingBox()); // 임시 생성
+    SceneOctree->BuildFull();
 }
 void UWorld::ClearScene()
 {
@@ -274,4 +242,32 @@ void UWorld::ClearScene()
         Prim->DestroyComponent();
         
     }
+}
+void UWorld::ReloadScene(const FString& FileName)
+{
+    FString NewFile = GEngineLoop.GetSceneManager()->LoadSceneFromFile(FileName);
+
+    if (SceneOctree && SceneOctree->GetRoot())
+        SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
+
+    ClearScene(); // 기존 오브젝트 제거
+    GEngineLoop.GetSceneManager()->ParseSceneData(NewFile);
+    BuildOctree();
+
+    if (HighlightedMeshComp)
+    {
+        HighlightedMeshComp->GetOwner()->Destroy();
+        HighlightedMeshComp->DestroyComponent();
+        HighlightedMeshComp = nullptr;
+        SetPickedActor(nullptr);
+    }
+
+    if (SceneKDTreeSystem)
+    {
+        delete SceneKDTreeSystem;
+        SceneKDTreeSystem = nullptr;
+    }
+
+    SceneKDTreeSystem = new FKDTreeSystem();
+    SceneKDTreeSystem->Build(SceneOctree->GetRoot()->Bounds);
 }

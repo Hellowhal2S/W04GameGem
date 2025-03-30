@@ -35,7 +35,6 @@ static bool CompareAxis(UStaticMeshComponent* A, UStaticMeshComponent* B, EKDAxi
 	return A->WorldAABB.GetCenter()[static_cast<int>(Axis)] <
 		   B->WorldAABB.GetCenter()[static_cast<int>(Axis)];
 }
-
 void FKDTreeNode::Build(TArray<UStaticMeshComponent*>& InComponents, int Depth)
 {
 	if (InComponents.Num() == 1)

@@ -34,11 +34,14 @@ void ProfilingEditorPanel::Render()
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
         //ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
         //ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        
+        //ImGui::SliderInt("KDTreeDepth", &GEngineLoop.GetWorld()->SceneOctree->MaxDepthKD, 0, 5);
+        //if (ImGui::Checkbox("UseKD",&GEngineLoop.GetWorld()->SceneOctree->bUseKD));
         if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
         if (ImGui::Checkbox("Debug OctreeAABB",&FEngineLoop::renderer.bDebugOctreeAABB));
         if (ImGui::Button("Clear Cache"))
         {
-            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->ClearBatchDatas(FEngineLoop::renderer);
+            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->ClearBatchDatas();
         }
         if (ImGui::Button("Clear Buffer"))
         {

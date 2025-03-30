@@ -5,6 +5,8 @@
 #include "../../Core/Container/Map.h"
 #include "Math.h"
 
+class UStaticMeshComponent;
+class FKDTreeNode;
 struct FRay;
 class FRenderer;
 class UPrimitiveBatch;
@@ -42,7 +44,8 @@ public:
     int Depth = 0;
 
     TMap<FString, FRenderBatchData> CachedBatchData;
-
+    FKDTreeNode* KDTree = nullptr;
+    
     FOctreeNode(const FBoundingBox& InBounds, int InDepth);
     ~FOctreeNode();
 
@@ -51,22 +54,21 @@ public:
     //사용할 노드들의 Vertex,Index 버퍼를 미리 생성
     void BuildBatchBuffers(FRenderer& Renderer);
     //CachedBatchData 전부 할당 해제. 현재 버퍼 생성 후 자동 실행
-    void ClearBatchDatas(FRenderer& Renderer);
-
+    void ClearBatchDatas();
+    void ClearKDDatas(int MaxDepthKD);
     //재귀적으로 Components를 적절한 노드에 추가
     void Insert(UPrimitiveComponent* Component, int MaxDepth = 5);
-    void InsertOverlapping(UPrimitiveComponent* Component, int MaxDepth=3);
-
-    //Octree를 순회하면서 렌더할 오브젝트 결정. 하지만 현재 사용 X
-    void Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
+    void BuildOverlappingRecursive(UPrimitiveComponent* Component);
+    void BuildKDTreeRecursive();
+    
     //Lazy Segtree에서 사용. FrameThreshold프레임만큼 사용하지 않은 버퍼 할당 해제. 현재 사용 X
     void TickBuffers(int CurrentFrame, int FrameThreshold);
     //현재 렌더할 노드를 결정해서 FRenderBatchData를 반환
     void CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap);
-    //현재 렌더할 노드를 결정해서 바로 렌더. mat sort가 안되서 현재 사용 X
-    void RenderBatches(FRenderer& Renderer,const FFrustum& Frustum,const FMatrix& VP);
 
     UPrimitiveComponent* Raycast(const FRay& Ray, float& OutDistance) const;
+    UPrimitiveComponent* RaycastWithKD(const FRay& Ray, float& OutDistance,int MaxDepthKD) const;
+
 };
 //현재 (GRenderDepthMax-GRenderDepthMin+1)*2GB만큼의 VRam 사용
 inline int GRenderDepthMin = 1; // 최소 깊이 (이보다 얕으면 스킵)
@@ -76,16 +78,16 @@ class FOctree
 public:
     FOctree(const FBoundingBox& InBounds);
     ~FOctree();
+    void BuildFull();
 
     //모든 UPrimComp를 순회하며 Root에 삽입+WorldAABB Update
     void Build();
-    //위에 Query함수 사용. 현재 사용 X
-    void QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
-    
+
     FOctreeNode* GetRoot() { return Root; };
 
     UPrimitiveComponent* Raycast(const FRay& Ray, float& OutHitDistance) const;
-
+    int MaxDepthKD=4;
+    bool bUseKD=true;
 private:
     FOctreeNode* Root;
 };

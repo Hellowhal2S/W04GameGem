@@ -130,6 +130,8 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     GWorld = new UWorld;
     GWorld->Initialize();
 
+    SceneMgr = new FSceneMgr();
+
     return 0;
 }
 

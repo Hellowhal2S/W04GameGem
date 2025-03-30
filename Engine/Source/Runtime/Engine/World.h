@@ -92,6 +92,7 @@ public:
 
     UStaticMeshComponent* HighlightedMeshComp;
     void ClearScene();
+    void ReloadScene(const FString& FileName);
 };
 
 

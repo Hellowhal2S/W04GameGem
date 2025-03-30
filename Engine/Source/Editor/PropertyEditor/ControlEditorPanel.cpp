@@ -87,8 +87,8 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
     
     if (bOpenMenu)
     {
-        std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
-
+        //std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
+        FSceneMgr* SceneMgr=GEngineLoop.GetSceneManager();
         ImGui::SetNextWindowPos(ImVec2(10, 55), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(135, 170), ImGuiCond_Always);
         
@@ -110,30 +110,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
                 ImGui::End();
                 return;
             }
-
-            // TODO: Load Scene
-            FString NewFile = SceneMgr->LoadSceneFromFile(FileName);
-            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
-            GEngineLoop.GetWorld()->ClearScene();
-            SceneMgr->ParseSceneData(NewFile);
-            GEngineLoop.GetWorld()->BuildOctree();
-            if (GEngineLoop.GetWorld()->HighlightedMeshComp)
-            {
-                delete GEngineLoop.GetWorld()->HighlightedMeshComp;
-                GEngineLoop.GetWorld()->HighlightedMeshComp=nullptr;
-            }
-            if (GEngineLoop.GetWorld()->SceneKDTreeSystem)
-            {
-                delete GEngineLoop.GetWorld()->SceneKDTreeSystem;
-                GEngineLoop.GetWorld()->SceneKDTreeSystem = nullptr;
-            }
-            GEngineLoop.GetWorld()->SceneKDTreeSystem = new FKDTreeSystem();
-            GEngineLoop.GetWorld()->SceneKDTreeSystem->Build(GEngineLoop.GetWorld()->SceneOctree->GetRoot()->Bounds);
-            //while (!NewData.Cameras.IsEmpty())
-            //{
-            //    const std::unique_ptr<Camear
-            //}
-
+            GEngineLoop.GetWorld()->ReloadScene(FileName);
         }
 
         ImGui::Separator();
