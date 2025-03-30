@@ -107,7 +107,7 @@ FStatRegistry::FFPSStats FStatRegistry::GetFPSStats(const TStatId& StatId)
 
 	Result.FPS_Min = 1000.0 / MainFrameRecord.MaxMs;
 	Result.FPS_Max = 1000.0 / MainFrameRecord.MinMs;
-
+    Result.ms=GetLastMilliseconds(StatId);
 	return Result;
 }
 void FStatRegistry::SetMainFrameStat(const TStatId& StatId)

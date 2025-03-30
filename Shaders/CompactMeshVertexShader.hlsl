@@ -19,7 +19,6 @@ PS_INPUT mainVS(VS_INPUT input)
     PS_INPUT output;
     float4 localPos = input.position;
     output.position = mul(localPos, MVP);
-    //output.UV = input.UV; // 이미 정규화된 값
     output.UV = input.UV * 2.0f - 1.0f;
     return output;
 }
