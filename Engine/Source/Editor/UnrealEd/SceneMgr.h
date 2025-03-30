@@ -1,7 +1,9 @@
 #pragma once
 #include "Define.h"
 #include "Container/Map.h"
+#include "EngineLoop.h"
 
+extern FEngineLoop GEngineLoop;
 class UObject;
 struct SceneData {
     int32 Version;

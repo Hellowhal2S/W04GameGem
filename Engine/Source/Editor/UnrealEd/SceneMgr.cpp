@@ -125,7 +125,6 @@ FString FSceneMgr::LoadSceneFromFile(const FString& filename)
         UE_LOG(LogLevel::Error, "Failed to open file for reading: %s", *filename);
         return FString();
     }
-
     json j;
     try {
         inFile >> j; // JSON 파일 읽기

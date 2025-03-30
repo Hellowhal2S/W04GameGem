@@ -9,6 +9,9 @@
 #include "Container/Map.h"
 #include "HAL/PlatformType.h"
 #include "Serialization/Serializer.h"
+#include "EngineLoop.h"
+
+extern FEngineLoop GEngineLoop;
 
 class UStaticMesh;
 struct FManagerOBJ;
@@ -502,6 +505,7 @@ static bool CanMerge(const FVector& pos1, const FVector& pos2,
     
     return true;
 }
+
 class QEMSimplifier {
 public:
     // targetVertexCount까지 단순화 (예제에서는 면 정보를 이용하여 인접 정점만 후보로 처리)
@@ -590,54 +594,48 @@ public:
         while (obj.Vertices.Num() > (size_t)targetVertexCount && !collapseQueue.empty()) {
             EdgeCollapse bestCollapse = collapseQueue.top();
             collapseQueue.pop();
-        //     wchar_t buffer[256];  // 메시지를 저장할 버퍼
-        //     swprintf_s(buffer, L"Edge %d  %dLength: %f", bestCollapse.v1, bestCollapse.v2, (FVector(obj.Vertices[bestCollapse.v1].x, obj.Vertices[ bestCollapse.v1].y, obj.Vertices[ bestCollapse.v1].z) -
-        // FVector(obj.Vertices[ bestCollapse.v2].x, obj.Vertices[ bestCollapse.v2].y,obj.Vertices[ bestCollapse.v2].z)).Magnitude());
-        //     MessageBox(nullptr, buffer, L"오류", MB_OK);
-        //     swprintf_s(buffer, L"Cost %f ",bestCollapse.cost);
-        //     MessageBox(nullptr, buffer, L"오류", MB_OK);
             uint32 v1 = bestCollapse.i1.verIndex,v2 = bestCollapse.i2.verIndex;
             uint32 n1 = bestCollapse.i1.norIndex, n2 = bestCollapse.i2.norIndex;
             uint32 t1 = bestCollapse.i1.texIndex, t2 = bestCollapse.i2.texIndex;
             
             // 병합 전 원래 v1과 v2의 위치와 UV 기록
-            // FVector oldPos_v1 = obj.Vertices[v1];
-            // FVector oldPos_v2 = obj.Vertices[v2];
-            // FVector normal_v1 = obj.Normals[n1];
-            // FVector normal_v2 = obj.Normals[n2];
-            // FVector2D uv_v1 = obj.UVs[t1];
-            // FVector2D uv_v2 = obj.UVs[t2];
+            FVector oldPos_v1 = obj.Vertices[v1];
+            FVector oldPos_v2 = obj.Vertices[v2];
+            FVector normal_v1 = obj.Normals[n1];
+            FVector normal_v2 = obj.Normals[n2];
+            FVector2D uv_v1 = obj.UVs[t1];
+            FVector2D uv_v2 = obj.UVs[t2];
             
-            // obj.Vertices[v1] = bestCollapse.newPos;
-            // obj.Normals[v1] = (normal_v1 + normal_v2) * 0.5f;
-            // obj.Normals[v1] = obj.Normals[v1].Normalize();
-            //
-            //
-            // float totalDist = (oldPos_v2 - oldPos_v1).Magnitude();
-            // float movedDist = (bestCollapse.newPos - oldPos_v1).Magnitude();
-            // float t = (totalDist > 1e-6f) ? (movedDist / totalDist) : 0.5f;
-            // obj.UVs[v1] =  FVector2D::Lerp(uv_v1, uv_v2, t);
-            // obj.UVs[v1] =  uv_v1;
+             // obj.Vertices[v1] = (oldPos_v1 + oldPos_v2) * .5f;
+            // obj.Normals[n1] = (normal_v1 + normal_v2) * 0.5f;
+            // obj.Normals[n1] = obj.Normals[n1].Normalize();
+            
+            
+            float totalDist = (oldPos_v2 - oldPos_v1).Magnitude();
+            float movedDist = (bestCollapse.newPos - oldPos_v1).Magnitude();
+            float t = (totalDist > 1e-6f) ? (movedDist / totalDist) : 0.5f;
+            // obj.UVs[t1] =  FVector2D::Lerp(uv_v1, uv_v2, t);
+            obj.UVs[t1] =  uv_v1;
 
             
             // 정점 삭제: v2 정점을 제거 (삭제 후 인덱스 재매핑 필요)
             obj.Vertices.RemoveAt(v2);
-            obj.Normals.RemoveAt(n2);
-            obj.UVs.RemoveAt(t2);
+            // obj.Normals.RemoveAt(n2);
+            // obj.UVs.RemoveAt(t2);
             
             // 인덱스 재매핑: 삭제된 정점 v2에 해당하는 인덱스는 v1로, v2보다 큰 인덱스는 1씩 감소
             for (auto& index : obj.VertexIndices) {
                 if (index == v2) index = v1;
                 else if (index > v2) index--;
             }
-            for (auto& index : obj.NormalIndices) {
-                if (index == n2) index = n1;
-                else if (index > n2) index--;
-            }
-            for (auto& index : obj.TextureIndices) {
-                if (index == t2) index = t1;
-                else if (index > t2) index--;
-            }
+            // for (auto& index : obj.NormalIndices) {
+            //     if (index == n2) index = n1;
+            //     else if (index > n2) index--;
+            // }
+            // for (auto& index : obj.TextureIndices) {
+            //     if (index == t2) index = t1;
+            //     else if (index > t2) index--;
+            // }
 
 
             edgeSet.clear();
@@ -717,9 +715,6 @@ public:
                 quadrics[v2].Add(q);
             }
             for (const auto& edge : edgeSet) {
- 
-                // UE_LOG(LogLevel::Warning, "Edge %d  %dLength: %f", edge.first, edge.second, (FVector(obj.Vertices[edge.first].x, obj.Vertices[edge.first].y, obj.Vertices[edge.first].z) -
-                // FVector(obj.Vertices[edge.second].x, obj.Vertices[edge.second].y,obj.Vertices[edge.second].z)).Magnitude());
                 IndexSet minEdge = edge.first, maxEdge = edge.second;
                 if (!CanMerge(obj.Vertices[minEdge.verIndex], obj.Vertices[maxEdge.verIndex],
                               obj.UVs[minEdge.texIndex], obj.UVs[maxEdge.texIndex]))

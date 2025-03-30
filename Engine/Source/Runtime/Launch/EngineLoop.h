@@ -3,7 +3,7 @@
 #include "D3D11RHI/GraphicDevice.h"
 #include "Renderer/Renderer.h"
 #include "Engine/ResourceMgr.h"
-
+#include "EngineBaseTypes.h"
 class UnrealEd;
 class UImGuiManager;
 class UWorld;
@@ -44,10 +44,15 @@ private:
     SLevelEditor* LevelEditor;
     UnrealEd* UnrealEditor;
     bool bIsExit = false;
-    const int32 targetFPS = 240;
+    const int32 targetFPS = 10000;
     bool bTestInput = false;
-
+    EObjQuality quality = EObjQuality::OQ_High;
+    FString curMapName = "Default";
 public:
+    FString GetCurMapName(){return curMapName;}
+    void SetCurMap(FString newMap) {curMapName = newMap;}
+    EObjQuality GetQuality() {return quality;}
+    void SetQuality(EObjQuality newQuality) { quality = newQuality;}
     UWorld* GetWorld() const { return GWorld; }
     SLevelEditor* GetLevelEditor() const { return LevelEditor; }
     UnrealEd* GetUnrealEditor() const { return UnrealEditor; }

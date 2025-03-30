@@ -109,6 +109,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
 
             // TODO: Load Scene
             FString NewFile = SceneMgr->LoadSceneFromFile(FileName);
+            GEngineLoop.SetCurMap(FileName);
             GEngineLoop.GetWorld()->ClearScene();
             SceneMgr->ParseSceneData(NewFile);
             GEngineLoop.GetWorld()->BuildOctree();

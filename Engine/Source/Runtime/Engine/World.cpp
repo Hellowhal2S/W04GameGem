@@ -28,10 +28,9 @@ void UWorld::Initialize()
     //SpawnObject(OBJ_CUBE);
 
     // FManagerOBJ::CreateStaticMesh("Assets/SkySphere.obj");
-    // AActor* SpawnedActor = SpawnActor<AActor>();
-    // USkySphereComponent* skySphere = SpawnedActor->AddComponent<USkySphereComponent>();
-    // skySphere->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"SkySphere.obj"));
-    // skySphere->GetStaticMesh()->GetMaterials()[0]->Material->SetDiffuse(FVector((float)32/255, (float)171/255, (float)191/255));
+    // AActor* Car = SpawnActor<AActor>();
+    // UStaticMeshComponent* CarComp = Car->AddComponent<UStaticMeshComponent>();
+    // CarComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Dodge.obj"));
     BuildOctree();
 }
 
@@ -41,24 +40,24 @@ void UWorld::CreateBaseObject()
     {
         EditorPlayer = FObjectFactory::ConstructObject<AEditorPlayer>();;
     }
-    FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
+    // FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
 
 
-    for (int i = 0; i < 1; i++)
-    {
-        for (int j = 0; j < 1; j++)
-        {
-            for (int k = 0; k < 1; k++)
-            {
-                AActor* SpawnedActor = SpawnActor<AActor>();
-                UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
-                apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
-                FVector newPos = FVector(i, j, k);
-                SpawnedActor->SetActorLocation(newPos);
-                apple->UpdateWorldAABB();
-            }
-        }
-    }
+    // for (int i = 0; i < 10; i++)
+    // {
+    //     for (int j = 0; j < 10; j++)
+    //     {
+    //         for (int k = 0; k < 10; k++)
+    //         {
+    //             AActor* SpawnedActor = SpawnActor<AActor>();
+    //             UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
+    //             apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.objX1"));
+    //             FVector newPos = FVector(i, j, k);
+    //             SpawnedActor->SetActorLocation(newPos);
+    //             apple->UpdateWorldAABB();
+    //         }
+    //     }
+    // }
     // if (LocalGizmo == nullptr)
     // {
     //     LocalGizmo = FObjectFactory::ConstructObject<UTransformGizmo>();

@@ -7,7 +7,6 @@ enum EViewModeIndex
     VMI_Wireframe,
 };
 
-
 enum ELevelViewportType
 {
     LVT_Perspective = 0,
@@ -25,4 +24,12 @@ enum ELevelViewportType
     LVT_OrthoNegativeXZ,
     LVT_MAX,
     LVT_None = 255,
+};
+
+enum EObjQuality
+{
+    OQ_Low = 0,
+    OQ_Normal = 1,
+    OQ_High = 2,
+    OQ_None = 3,
 };

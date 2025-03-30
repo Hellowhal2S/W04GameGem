@@ -3,6 +3,8 @@
 #include "Components/Material/Material.h"
 #include "Components/Mesh/StaticMesh.h"
 
+
+
 OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& PathFileName)
 {
     OBJ::FStaticMeshRenderData* NewStaticMesh = new OBJ::FStaticMeshRenderData();
@@ -26,19 +28,12 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     FObjInfo NewObjInfo;
     bool Result = FLoaderOBJ::ParseOBJ(PathFileName, NewObjInfo);
     wchar_t buffer[256];  // 메시지를 저장할 버퍼
-    swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
-    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.VertexIndices.Num());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
-    QEMSimplifier::Simplify(NewObjInfo, NewObjInfo.Vertices.Num() * 0.8);
-    swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
-    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.VertexIndices.Num());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
-    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.Normals.Num());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
-    swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.UVs.Num());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
+    // swprintf_s(buffer, L"Vertex 개수: %d", NewObjInfo.Vertices.Num());
+    // MessageBox(nullptr, buffer, L"오류", MB_OK);
+    // swprintf_s(buffer, L"Index 개수: %d", NewObjInfo.VertexIndices.Num());
+    // MessageBox(nullptr, buffer, L"오류", MB_OK);
+    // QEMSimplifier::Simplify(NewObjInfo, NewObjInfo.Vertices.Num() * 0.5);
+
     if (!Result)
     {
         delete NewStaticMesh;
@@ -49,15 +44,12 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     if (NewObjInfo.MaterialSubsets.Num() > 0)
     {
         Result = FLoaderOBJ::ParseMaterial(NewObjInfo, *NewStaticMesh);
-
         if (!Result)
         {
             delete NewStaticMesh;
             return nullptr;
         }
-
         CombineMaterialIndex(*NewStaticMesh);
-
         for (int materialIndex = 0; materialIndex < NewStaticMesh->Materials.Num(); materialIndex++) {
             CreateMaterial(NewStaticMesh->Materials[materialIndex]);
         }
@@ -70,9 +62,60 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
         delete NewStaticMesh;
         return nullptr;
     }
-
-    // SaveStaticMeshToBinary(BinaryPath, *NewStaticMesh);
     ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
+
+    OBJ::FStaticMeshRenderData* DowngradeX5 = new OBJ::FStaticMeshRenderData();
+    FObjInfo DowngradeX5Obj = NewObjInfo;
+    QEMSimplifier::Simplify(DowngradeX5Obj, DowngradeX5Obj.Vertices.Num() * 0.5);
+    swprintf_s(buffer, L"Display Name : %s, ObjectName : %s, PathName : %s", DowngradeX5Obj.DisplayName.ToWideString().c_str(), DowngradeX5Obj.ObjectName.c_str(), DowngradeX5Obj.PathName.c_str());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
+    DowngradeX5Obj.ObjectName = DowngradeX5Obj.ObjectName + L"X5";
+
+    if (DowngradeX5Obj.MaterialSubsets.Num() > 0)
+    {
+        Result = FLoaderOBJ::ParseMaterial(DowngradeX5Obj, *DowngradeX5);
+        if (!Result)
+        {
+            delete DowngradeX5;
+            return nullptr;
+        }
+        CombineMaterialIndex(*DowngradeX5);
+        for (int materialIndex = 0; materialIndex < DowngradeX5->Materials.Num(); materialIndex++) {
+            CreateMaterial(DowngradeX5->Materials[materialIndex]);
+        }
+    }
+    FLoaderOBJ::ConvertToStaticMesh(DowngradeX5Obj, *DowngradeX5);
+    ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
+    UStaticMesh* staticMeshDowngradeX5 = FObjectFactory::ConstructObject<UStaticMesh>();
+    staticMeshDowngradeX5->SetData(DowngradeX5);
+    staticMeshMap.Add(DowngradeX5->ObjectName, staticMeshDowngradeX5);
+
+    
+    OBJ::FStaticMeshRenderData* DowngradeX1 = new OBJ::FStaticMeshRenderData();
+    FObjInfo DowngradeX1Obj = NewObjInfo;
+    QEMSimplifier::Simplify(DowngradeX1Obj, DowngradeX1Obj.Vertices.Num() * 0.1);
+    swprintf_s(buffer, L"Display Name : %s, ObjectName : %s, PathName : %s", DowngradeX1Obj.DisplayName.ToWideString().c_str(), DowngradeX1Obj.ObjectName.c_str(), DowngradeX1Obj.PathName.c_str());
+    MessageBox(nullptr, buffer, L"오류", MB_OK);
+    DowngradeX1Obj.ObjectName = DowngradeX1Obj.ObjectName + L"X1";
+
+    if (DowngradeX1Obj.MaterialSubsets.Num() > 0)
+    {
+        Result = FLoaderOBJ::ParseMaterial(DowngradeX1Obj, *DowngradeX1);
+        if (!Result)
+        {
+            delete DowngradeX1;
+            return nullptr;
+        }
+        CombineMaterialIndex(*DowngradeX1);
+        for (int materialIndex = 0; materialIndex < DowngradeX1->Materials.Num(); materialIndex++) {
+            CreateMaterial(DowngradeX1->Materials[materialIndex]);
+        }
+    }
+    FLoaderOBJ::ConvertToStaticMesh(DowngradeX1Obj, *DowngradeX1);
+    ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
+    UStaticMesh* staticMeshDowngradeX1 = FObjectFactory::ConstructObject<UStaticMesh>();
+    staticMeshDowngradeX1->SetData(DowngradeX1);
+    staticMeshMap.Add(DowngradeX1->ObjectName, staticMeshDowngradeX1);
     return NewStaticMesh;
 }
 
@@ -319,5 +362,11 @@ UStaticMesh* FManagerOBJ::CreateStaticMesh(FString filePath)
 
 UStaticMesh* FManagerOBJ::GetStaticMesh(FWString name)
 {
-    return staticMeshMap[name];
+    EObjQuality Quality = GEngineLoop.GetQuality();
+    if (Quality == EObjQuality::OQ_High)
+        return staticMeshMap[name];
+    else if (Quality == EObjQuality::OQ_Normal)
+        return staticMeshMap[name + L"X5"];
+    else if (Quality == EObjQuality::OQ_Low)
+        return staticMeshMap[name + L"X1"];
 }
