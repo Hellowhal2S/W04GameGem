@@ -45,25 +45,25 @@ public:
 
     void BuildBatchRenderData();
     void BuildBatchBuffers(FRenderer& Renderer);
+    void ClearBatchDatas(FRenderer& Renderer);
+
+    
     void Insert(UPrimitiveComponent* Component, int MaxDepth = 5);
     void Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
     void TickBuffers(int CurrentFrame, int FrameThreshold);
-
-    void RenderBatches(
-        FRenderer& Renderer,
-        const FFrustum& Frustum,
-        const FMatrix& VP
-    );
-
+    void CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap);
+    
     void RenderVisible(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP);
     void QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum, bool bParentVisible);
     void QueryOcclusionRegisterOnly(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum);
 
     const int MaxQueriesPerFrame = 500;
 
+    void RenderBatches(FRenderer& Renderer,const FFrustum& Frustum,const FMatrix& VP);
 };
-inline int GRenderDepthMin = 1;  // 최소 깊이 (이보다 얕으면 스킵)
-inline int GRenderDepthMax = 2;  // 최대 깊이 (이보다 깊으면 스킵)
+
+inline int GRenderDepthMin = 1; // 최소 깊이 (이보다 얕으면 스킵)
+inline int GRenderDepthMax = 2; // 최대 깊이 (이보다 깊으면 스킵)
 class FOctree
 {
 public:
@@ -93,3 +93,5 @@ inline int MakeNodeId(const FBoundingBox& Bounds)
         static_cast<int>(Bounds.min.z * 83492791));
     return hash;
 }
+
+void RenderCollectedBatches(FRenderer& Renderer,const FMatrix& VP,const TMap<FString, TArray<FRenderBatchData*>>& RenderMap);

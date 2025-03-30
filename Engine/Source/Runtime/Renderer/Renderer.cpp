@@ -1142,29 +1142,16 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     FStatRegistry::RegisterResult(OcclusionTimer);
 
     FScopeCycleCounter BatchTimer("BatchTimer");
-    World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
-    FStatRegistry::RegisterResult(BatchTimer); 
-    /*
-    TArray<UPrimitiveComponent*> VisibleComponents;
-    if (World->SceneOctree)
+    //World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
+    if (bMaterialSort)
     {
-        World->SceneOctree->QueryVisible(Frustum, VisibleComponents);
-        //DebugRenderOctreeNode(&UPrimitiveBatch::GetInstance(),World->SceneOctree->GetRoot(),5);
-    }
-    FStatRegistry::RegisterResult(FrustumTimer);
+        TMap<FString, TArray<FRenderBatchData*>> RenderMap;
+        World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderMap);
+        // 2. 렌더링
+        RenderCollectedBatches(*this, View*Proj, RenderMap);
+    }else World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
     
-    FScopeCycleCounter Timer1("Visible Render");
-    //RenderVisibleComponents(World,VisibleComponents,View*Proj);
-    FStatRegistry::RegisterResult(Timer1);
-    FScopeCycleCounter Timer2("Sort Render");
-    FScopeCycleCounter Timer3("Sort");
-    TArray<FSortedRenderEntry> SortedEntries;
-    CollectSortedRenderEntries(VisibleComponents, SortedEntries);
-    FStatRegistry::RegisterResult(Timer3);
-    RenderSortedEntries(World,ActiveViewport,SortedEntries, View*Proj);
-    FStatRegistry::RegisterResult(Timer2);
-    UE_LOG(LogLevel::Display,"Visible Obj:%d",VisibleComponents.Len());
-*/
+    FStatRegistry::RegisterResult(BatchTimer); 
 }
 void FRenderer::RenderVisibleComponents(UWorld* World,TArray<UPrimitiveComponent*>& VisibleComponents,FMatrix VP)
 {

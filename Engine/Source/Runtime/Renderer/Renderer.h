@@ -150,7 +150,7 @@ public: // line shader
     void RenderOcclusionBox(const FBoundingBox& bounds);
     void SetOcclusionRenderState();
     void RenderBillboards(UWorld* World,std::shared_ptr<FEditorViewportClient> ActiveViewport);
-
+    
     //Render Profiling Testing
     struct FSortedRenderEntry
     {
@@ -171,6 +171,7 @@ public: // line shader
     mutable FObjMaterialInfo CachedMaterialInfo;
     mutable std::wstring CachedTexturePath;
     mutable bool bMaterialDirty = true;
+    bool bMaterialSort = true;
 private:
     TArray<UStaticMeshComponent*> StaticMeshObjs;
     TArray<UGizmoBaseComponent*> GizmoObjs;

@@ -25,13 +25,6 @@ void UWorld::Initialize()
     FScopeCycleCounter Timer("CreateBaseObject");
     CreateBaseObject();
     FStatRegistry::RegisterResult(Timer); 
-    //SpawnObject(OBJ_CUBE);
-
-    // FManagerOBJ::CreateStaticMesh("Assets/SkySphere.obj");
-    // AActor* SpawnedActor = SpawnActor<AActor>();
-    // USkySphereComponent* skySphere = SpawnedActor->AddComponent<USkySphereComponent>();
-    // skySphere->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"SkySphere.obj"));
-    // skySphere->GetStaticMesh()->GetMaterials()[0]->Material->SetDiffuse(FVector((float)32/255, (float)171/255, (float)191/255));
     BuildOctree();
 }
 
@@ -199,7 +192,8 @@ void UWorld::BuildOctree()
     SceneOctree = new FOctree(WorldBounds);
     SceneOctree->Build(); // 모든 컴포넌트 삽입
     SceneOctree->GetRoot()->BuildBatchRenderData();   // 2단계: 머티리얼 기준 정점 수집
-    //SceneOctree->GetRoot()->BuildBatchBuffers(FEngineLoop::renderer);
+    SceneOctree->GetRoot()->BuildBatchBuffers(FEngineLoop::renderer);
+    SceneOctree->GetRoot()->ClearBatchDatas(FEngineLoop::renderer);
     FStatRegistry::RegisterResult(Timer); 
 }
 void UWorld::ClearScene()
