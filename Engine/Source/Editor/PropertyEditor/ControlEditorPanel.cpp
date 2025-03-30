@@ -10,6 +10,7 @@
 #include "Engine/FLoaderOBJ.h"
 #include "Engine/StaticMeshActor.h"
 #include "ImGUI/imgui_internal.h"
+#include "KDTree/KDTree.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "Octree/Octree.h"
 #include "Profiling/StatRegistry.h"
@@ -115,6 +116,10 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
             GEngineLoop.GetWorld()->ClearScene();
             SceneMgr->ParseSceneData(NewFile);
             GEngineLoop.GetWorld()->BuildOctree();
+            
+            delete GEngineLoop.GetWorld()->SceneKDTree;
+            GEngineLoop.GetWorld()->SceneKDTree = new FKDTree();
+            GEngineLoop.GetWorld()->SceneKDTree->Build();
             //while (!NewData.Cameras.IsEmpty())
             //{
             //    const std::unique_ptr<Camear

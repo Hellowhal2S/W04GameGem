@@ -17,7 +17,7 @@ class AEditorPlayer : public AActor
 
     void Input();
     void HandleLeftClick();
-    void TryPickActor(const FVector& pickPosition);
+    void TryPickActor();
 
     bool PickGizmo(FVector& rayOrigin);
     void PickActor(const FVector& pickPosition);

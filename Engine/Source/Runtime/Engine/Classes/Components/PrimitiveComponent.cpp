@@ -64,6 +64,7 @@ bool UPrimitiveComponent::IntersectRayTriangle(const FVector& rayOrigin, const F
 
     return false;
 }
+/*
 bool UPrimitiveComponent::IntersectRaySphere(
     const FVector& rayOrigin,
     const FVector& rayDirection,
@@ -95,7 +96,7 @@ bool UPrimitiveComponent::IntersectRaySphere(
     hitDistance = t;
     return true;
 }
-
+*/
 void UPrimitiveComponent::UpdateWorldAABB()
 {
     FMatrix ModelMatrix = GetOwner()->GetModelMatrix();

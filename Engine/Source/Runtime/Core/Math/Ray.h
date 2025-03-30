@@ -76,3 +76,32 @@ inline bool RayIntersectsAABB(const FRay& Ray, const FBoundingBox& Box, float& O
     OutHitDistance = tMin;
     return true;
 }
+inline bool IntersectRaySphere(const FVector& rayOrigin, const FVector& rayDir, const FVector& sphereCenter, float radius, float& outDist)
+{
+    FVector oc = rayOrigin - sphereCenter;
+    float a = rayDir.Dot(rayDir);
+    float b = 2.0f * oc.Dot(rayDir);
+    float c = oc.Dot(oc) - radius * radius;
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0)
+        return false;
+
+    float sqrtDisc = sqrtf(discriminant);
+    float t1 = (-b - sqrtDisc) / (2.0f * a);
+    float t2 = (-b + sqrtDisc) / (2.0f * a);
+
+    // 가장 가까운 양의 값만 선택
+    if (t1 > 0.001f)
+    {
+        outDist = t1;
+        return true;
+    }
+    if (t2 > 0.001f)
+    {
+        outDist = t2;
+        return true;
+    }
+
+    return false;
+}

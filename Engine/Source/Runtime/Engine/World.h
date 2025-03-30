@@ -4,6 +4,7 @@
 #include "UObject/ObjectFactory.h"
 #include "UObject/ObjectMacros.h"
 
+class FKDTree;
 class FFrustum;
 class FOctree;
 class FObjectFactory;
@@ -61,7 +62,7 @@ public:
     UObject* worldGizmo = nullptr;
 
     FOctree* SceneOctree;
-    
+    FKDTree* SceneKDTree = nullptr;
     void BuildOctree();
     void ClearOctree();
     void DebugDrawFrustum(const FFrustum& Frustum);

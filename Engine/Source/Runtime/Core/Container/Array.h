@@ -364,3 +364,18 @@ void TArray<T, Allocator>::ShrinkToFit()
 {
     ContainerPrivate.shrink_to_fit();
 }
+template <typename T>
+TArray<T> Slice(const TArray<T>& InArray, int32 StartIndex, int32 Count)
+{
+    TArray<T> Result;
+    if (StartIndex < 0 || Count <= 0 || StartIndex >= InArray.Num())
+        return Result;
+
+    int32 MaxCount = std::min(Count, InArray.Num() - StartIndex);
+    Result.Reserve(MaxCount);
+    for (int32 i = 0; i < MaxCount; ++i)
+    {
+        Result.Add(InArray[StartIndex + i]);
+    }
+    return Result;
+}

@@ -10,6 +10,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "Components/SkySphereComponent.h"
 #include "Components/SphereComp.h"
+#include "KDTree/KDTree.h"
 #include "Octree/Octree.h"
 #include "Math/Frustum.h"
 #include "Math/JungleMath.h"
@@ -26,6 +27,8 @@ void UWorld::Initialize()
     CreateBaseObject();
     FStatRegistry::RegisterResult(Timer); 
     BuildOctree();
+    SceneKDTree = new FKDTree();
+    SceneKDTree->Build();
 }
 
 void UWorld::CreateBaseObject()

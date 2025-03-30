@@ -16,7 +16,7 @@ public:
         const FVector& rayOrigin, const FVector& rayDirection,
         const FVector& v0, const FVector& v1, const FVector& v2, float& hitDistance
     );
-    bool IntersectRaySphere(const FVector& rayOrigin,const FVector& rayDirection,float& hitDistance);
+    //bool IntersectRaySphere(const FVector& rayOrigin,const FVector& rayDirection,float& hitDistance);
 
     FBoundingBox AABB;
     FBoundingBox WorldAABB;
