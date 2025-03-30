@@ -187,26 +187,11 @@ void FOctree::BuildFull()
         }
     }
 
-    FVector Center = (MinBound + MaxBound) * 0.5f;
-    FVector Extents = (MaxBound - MinBound) * 0.5f;
-    float MaxExtent = FMath::Max(Extents.x, FMath::Max(Extents.y, Extents.z));
-    FVector CubeExtent(MaxExtent, MaxExtent, MaxExtent);
-    FVector CubeMin = Center - CubeExtent;
-    FVector CubeMax = Center + CubeExtent;
-
     delete Root;
-    Root = new FOctreeNode(FBoundingBox(CubeMin, CubeMax), 0);
+    Root = new FOctreeNode(FBoundingBox(MinBound, MaxBound), 0);
 
     // Step 2. 노드 삽입
-    for (const auto* SceneComp : TObjectRange<USceneComponent>())
-    {
-        if (auto* PrimComp = Cast<UPrimitiveComponent>(SceneComp))
-        {
-            PrimComp->UpdateWorldAABB();
-            Root->Insert(PrimComp);
-            Root->BuildOverlappingRecursive(PrimComp);
-        }
-    }
+    Build();
 
     // Step 3. KDTree 및 렌더링 데이터 구축
     Root->BuildKDTreeRecursive();
@@ -229,7 +214,6 @@ void FOctree::Build()
             Root->BuildOverlappingRecursive(PrimComp);
         }
     }
-    Root->BuildKDTreeRecursive();
 }
 
 UPrimitiveComponent* FOctree::Raycast(const FRay& Ray, float& OutHitDistance) const

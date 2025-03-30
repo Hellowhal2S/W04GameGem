@@ -79,7 +79,7 @@ UStaticMeshComponent* FKDTreeNode::Raycast(const FRay& Ray, float& OutDistance) 
 		float HitDist = 0;
 		if (Component->CheckRayIntersection(Ray.Origin, Ray.Direction, HitDist))
 		{
-			OutDistance = HitDist;
+			OutDistance = HitDist; 
 			return Component;
 		}
 		return nullptr;
