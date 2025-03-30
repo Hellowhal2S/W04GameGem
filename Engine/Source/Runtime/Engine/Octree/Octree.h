@@ -36,6 +36,7 @@ public:
     FOctreeNode* Children[8] = {nullptr};
     bool bIsLeaf = true;
     int Depth = 0;
+    int NodeId = 0;
 
     TMap<FString, FRenderBatchData> CachedBatchData;
 
@@ -53,6 +54,13 @@ public:
         const FFrustum& Frustum,
         const FMatrix& VP
     );
+
+    void RenderVisible(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP);
+    void QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum, bool bParentVisible);
+    void QueryOcclusionRegisterOnly(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum);
+
+    const int MaxQueriesPerFrame = 500;
+
 };
 inline int GRenderDepthMin = 1;  // 최소 깊이 (이보다 얕으면 스킵)
 inline int GRenderDepthMax = 2;  // 최대 깊이 (이보다 깊으면 스킵)
@@ -74,3 +82,14 @@ private:
 void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node, int MaxDepth);
 //FRenderer::RenderStaticMeshe에서 사용
 const int FrameThreshold = 2; // 프레임 이상 사용 안 한 버퍼 제거
+
+
+// 간단한 NodeId 생성기 (Bounds 기반 해시)
+inline int MakeNodeId(const FBoundingBox& Bounds)
+{
+    const int hash = static_cast<int>(
+        static_cast<int>(Bounds.min.x * 73856093) ^
+        static_cast<int>(Bounds.min.y * 19349663) ^
+        static_cast<int>(Bounds.min.z * 83492791));
+    return hash;
+}

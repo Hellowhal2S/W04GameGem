@@ -468,3 +468,11 @@ uint32 FGraphicsDevice::DecodeUUIDColor(FVector4 UUIDColor) {
 
     return W | Z | Y | X;
 }
+
+void FGraphicsDevice::RestoreDefaultRenderState() 
+{
+    DeviceContext->OMSetRenderTargets(2, RTVs, DepthStencilView); // 렌더 타겟 설정(백버퍼를 가르킴)
+    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+    DeviceContext->OMSetDepthStencilState(DepthStencilState, 0);
+    DeviceContext->RSSetState(CurrentRasterizer);
+}

@@ -146,6 +146,9 @@ public: // line shader
     void RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport);
     void RenderGizmos(const UWorld* World, const std::shared_ptr<FEditorViewportClient>& ActiveViewport);
     void RenderLight(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport);
+    void CreateOcclusion();
+    void RenderOcclusionBox(const FBoundingBox& bounds);
+    void SetOcclusionRenderState();
     void RenderBillboards(UWorld* World,std::shared_ptr<FEditorViewportClient> ActiveViewport);
 
     //Render Profiling Testing
@@ -182,5 +185,26 @@ public:
     ID3D11ShaderResourceView* pBBSRV = nullptr;
     ID3D11ShaderResourceView* pConeSRV = nullptr;
     ID3D11ShaderResourceView* pOBBSRV = nullptr;
+
+private:
+    struct FDebugVertex
+    {
+        FVector Position;     // float3
+        FVector4 Color;   // float4
+    };
+
+    ID3D11VertexShader* OcclusionVertexShader = nullptr;
+    ID3D11PixelShader* OcclusionPixelShader = nullptr;
+    ID3D11InputLayout* OcclusionInputLayout = nullptr;
+    ID3D11Buffer* OcclusionBoxVB = nullptr;
+    ID3D11Buffer* OcclusionBoxIB = nullptr;
+    ID3D11Buffer* cbWorld = nullptr;
+
+    ID3D11BlendState* NoColorWriteBlendState = nullptr;
+    ID3D11DepthStencilState* DepthTestOnlyState = nullptr;
+    ID3D11RasterizerState* OcclusionRasterizerState = nullptr;
+
+public:
+     ID3D11Buffer* cbViewProj = nullptr;
 };
 
