@@ -12,6 +12,6 @@ UEngineStatics::~UEngineStatics()
 
 uint32 UEngineStatics::GenUUID()
 {
-    UE_LOG(LogLevel::Display, "Generate UUID : %d", NextUUID);
+    //UE_LOG(LogLevel::Display, "Generate UUID : %d", NextUUID);
     return NextUUID++;
 }

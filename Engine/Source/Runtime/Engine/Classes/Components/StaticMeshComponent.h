@@ -17,7 +17,7 @@ public:
     virtual TArray<FName> GetMaterialSlotNames() const override;
     virtual void GetUsedMaterials(TArray<UMaterial*>& Out) const override;
 
-    virtual int CheckRayIntersection(FVector& rayOrigin, FVector& rayDirection, float& pfNearHitDistance) override;
+    virtual int CheckRayIntersection(const FVector& rayOrigin, const FVector& rayDirection, float& pfNearHitDistance) override;
     
     UStaticMesh* GetStaticMesh() const { return staticMesh; }
     void SetStaticMesh(UStaticMesh* value)

@@ -130,6 +130,8 @@ int32 FEngineLoop::Init(HINSTANCE hInstance)
     GWorld = new UWorld;
     GWorld->Initialize();
 
+    SceneMgr = new FSceneMgr();
+
     return 0;
 }
 
@@ -210,7 +212,7 @@ void FEngineLoop::Tick()
         UIMgr->BeginFrame();
         UnrealEditor->Render();
 
-        //Console::GetInstance().Draw();
+        Console::GetInstance().Draw();
 
         UIMgr->EndFrame();
         FStatRegistry::RegisterResult(Timer2);

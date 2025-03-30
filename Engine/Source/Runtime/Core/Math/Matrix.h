@@ -53,4 +53,15 @@ struct FMatrix
 		float w = M[0][3] * vector.x + M[1][3] * vector.y + M[2][3] * vector.z + M[3][3];
 		return w != 0.0f ? FVector{ x / w, y / w, z / w } : FVector{ x, y, z };
 	}
+    FVector GetColumn(int columnIndex) const
+	{
+	    if (columnIndex < 0 || columnIndex > 3)
+	        return FVector::ZeroVector;
+
+	    return FVector{
+	        M[0][columnIndex],
+            M[1][columnIndex],
+            M[2][columnIndex]
+        };
+	}
 };
