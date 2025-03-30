@@ -67,8 +67,6 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     OBJ::FStaticMeshRenderData* DowngradeX5 = new OBJ::FStaticMeshRenderData();
     FObjInfo DowngradeX5Obj = NewObjInfo;
     QEMSimplifier::Simplify(DowngradeX5Obj, DowngradeX5Obj.Vertices.Num() * 0.5);
-    swprintf_s(buffer, L"Display Name : %s, ObjectName : %s, PathName : %s", DowngradeX5Obj.DisplayName.ToWideString().c_str(), DowngradeX5Obj.ObjectName.c_str(), DowngradeX5Obj.PathName.c_str());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
     DowngradeX5Obj.ObjectName = DowngradeX5Obj.ObjectName + L"X5";
 
     if (DowngradeX5Obj.MaterialSubsets.Num() > 0)
@@ -94,8 +92,6 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     OBJ::FStaticMeshRenderData* DowngradeX1 = new OBJ::FStaticMeshRenderData();
     FObjInfo DowngradeX1Obj = NewObjInfo;
     QEMSimplifier::Simplify(DowngradeX1Obj, DowngradeX1Obj.Vertices.Num() * 0.1);
-    swprintf_s(buffer, L"Display Name : %s, ObjectName : %s, PathName : %s", DowngradeX1Obj.DisplayName.ToWideString().c_str(), DowngradeX1Obj.ObjectName.c_str(), DowngradeX1Obj.PathName.c_str());
-    MessageBox(nullptr, buffer, L"오류", MB_OK);
     DowngradeX1Obj.ObjectName = DowngradeX1Obj.ObjectName + L"X1";
 
     if (DowngradeX1Obj.MaterialSubsets.Num() > 0)

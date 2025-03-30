@@ -576,9 +576,6 @@ public:
         // 3. 후보 엣지들을 우선순위 큐에 추가 (병합 가능한지 검사)
         std::priority_queue<EdgeCollapse> collapseQueue;
         for (const auto& edge : edgeSet) {
- 
-            // UE_LOG(LogLevel::Warning, "Edge %d  %dLength: %f", edge.first, edge.second, (FVector(obj.Vertices[edge.first].x, obj.Vertices[edge.first].y, obj.Vertices[edge.first].z) -
-            // FVector(obj.Vertices[edge.second].x, obj.Vertices[edge.second].y,obj.Vertices[edge.second].z)).Magnitude());
             IndexSet minEdge = edge.first, maxEdge = edge.second;
             if (!CanMerge(obj.Vertices[minEdge.verIndex], obj.Vertices[maxEdge.verIndex],
                           obj.UVs[minEdge.texIndex], obj.UVs[maxEdge.texIndex]))
@@ -606,16 +603,16 @@ public:
             FVector2D uv_v1 = obj.UVs[t1];
             FVector2D uv_v2 = obj.UVs[t2];
             
-             // obj.Vertices[v1] = (oldPos_v1 + oldPos_v2) * .5f;
-            // obj.Normals[n1] = (normal_v1 + normal_v2) * 0.5f;
-            // obj.Normals[n1] = obj.Normals[n1].Normalize();
+            obj.Vertices[v1] = (oldPos_v1 + oldPos_v2) * .5f;
+            obj.Normals[n1] = (normal_v1 + normal_v2) * 0.5f;
+            obj.Normals[n1] = obj.Normals[n1].Normalize();
             
             
             float totalDist = (oldPos_v2 - oldPos_v1).Magnitude();
             float movedDist = (bestCollapse.newPos - oldPos_v1).Magnitude();
             float t = (totalDist > 1e-6f) ? (movedDist / totalDist) : 0.5f;
-            // obj.UVs[t1] =  FVector2D::Lerp(uv_v1, uv_v2, t);
-            obj.UVs[t1] =  uv_v1;
+            obj.UVs[t1] =  FVector2D::Lerp(uv_v1, uv_v2, t);
+            // obj.UVs[t1] =  uv_v1;
 
             
             // 정점 삭제: v2 정점을 제거 (삭제 후 인덱스 재매핑 필요)
