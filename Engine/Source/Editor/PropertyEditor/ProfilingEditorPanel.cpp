@@ -29,14 +29,13 @@ void ProfilingEditorPanel::Render()
         float fps = static_cast<float>(FStatRegistry::GetFPS(Stat_Frame));
         float ms = static_cast<float>(FStatRegistry::GetLastMilliseconds(Stat_Frame));
         ImGui::Text("FPS: %.2f (%.3f)ms", fps,ms);
+        ImGui::Text("Picking Time %.2fms: Num Attempts: %d:Accumulated Time %.2fms",FStatRegistry::GetLastMilliseconds("Picking"),FStatRegistry::TotalPickCount,FStatRegistry::TotalPickTime);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
         //ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
         //ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
-        if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort))
-        {
-            
-        }
+        if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
+        if (ImGui::Checkbox("Debug OctreeAABB",&FEngineLoop::renderer.bDebugOctreeAABB));
         if (ImGui::Button("Clear Cache"))
         {
             GEngineLoop.GetWorld()->SceneOctree->GetRoot()->ClearBatchDatas(FEngineLoop::renderer);

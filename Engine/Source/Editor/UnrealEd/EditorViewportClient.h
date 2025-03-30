@@ -141,6 +141,8 @@ public: //Camera Movement
     void CameraRotatePitch(float _Value);
     void PivotMoveRight(float _Value);
     void PivotMoveUp(float _Value);
+    FVector GetCameraWorldPosition() const;
+    FVector GetCameraForward();
 
     FMatrix& GetViewMatrix() { return  View; }
     FMatrix& GetProjectionMatrix() { return Projection; }

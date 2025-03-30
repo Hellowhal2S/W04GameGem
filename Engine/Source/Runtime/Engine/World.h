@@ -84,6 +84,10 @@ public:
     USceneComponent* GetPickingGizmo() const { return pickingGizmo; }
     void SetPickingGizmo(UObject* Object);
 
+    void SetHighlightedComponent(UStaticMeshComponent* OriginalMeshComp);
+    void RenderHighlightedComponent(FRenderer& Renderer, const FMatrix& VP);
+
+    UStaticMeshComponent* HighlightedMeshComp;
     void ClearScene();
 };
 

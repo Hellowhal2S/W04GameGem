@@ -8,6 +8,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Math/Frustum.h"
 #include "Math/JungleMath.h"
+#include "Math/Ray.h"
 #include "Profiling/PlatformTime.h"
 #include "Profiling/StatRegistry.h"
 #include "UnrealEd/PrimitiveBatch.h"
@@ -162,6 +163,56 @@ void FOctree::Build()
 void FOctree::QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const
 {
     Root->Query(Frustum, OutResults);
+}
+UPrimitiveComponent* FOctree::Raycast(const FRay& Ray, float& OutHitDistance) const
+{
+    if (!Root) return nullptr;
+    return Root->Raycast(Ray, OutHitDistance);
+}
+
+// Octree에서 Ray와 충돌한 가장 가까운 Component를 찾는 함수
+UPrimitiveComponent* FOctreeNode::Raycast(const FRay& Ray, float& OutDistance) const
+{
+    float NodeHitDist;
+    if (!RayIntersectsAABB(Ray, Bounds, NodeHitDist))
+        return nullptr;
+
+    UPrimitiveComponent* ClosestComponent = nullptr;
+    float ClosestDistance = FLT_MAX;
+
+    // Leaf 노드이면 컴포넌트 검사
+    if (bIsLeaf)
+    {
+        for (UPrimitiveComponent* Comp : Components)
+        {
+            float HitDist = 0;
+            int Intersect = Comp->CheckRayIntersection(Ray.Origin, Ray.Direction, HitDist);
+            if (Intersect > 0 && HitDist < ClosestDistance)
+            {
+                ClosestComponent = Comp;
+                ClosestDistance = HitDist;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            if (Children[i])
+            {
+                float ChildHitDist = FLT_MAX;
+                UPrimitiveComponent* HitComp = Children[i]->Raycast(Ray, ChildHitDist);
+                if (HitComp && ChildHitDist < ClosestDistance)
+                {
+                    ClosestComponent = HitComp;
+                    ClosestDistance = ChildHitDist;
+                }
+            }
+        }
+    }
+
+    OutDistance = ClosestDistance;
+    return ClosestComponent;
 }
 
 void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node, int MaxDepth)

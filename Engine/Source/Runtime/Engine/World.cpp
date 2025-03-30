@@ -156,7 +156,72 @@ void UWorld::SetPickingGizmo(UObject* Object)
 {
     pickingGizmo = Cast<USceneComponent>(Object);
 }
+void UWorld::SetHighlightedComponent(UStaticMeshComponent* OriginalMeshComp)
+{
+    if (!OriginalMeshComp) return;
 
+    // 기존 하이라이트 사과 제거
+    if (HighlightedMeshComp)
+    {
+        HighlightedMeshComp->GetOwner()->Destroy();
+        HighlightedMeshComp->DestroyComponent();
+        HighlightedMeshComp = nullptr;
+    }
+    AActor* SpawnedActor = SpawnActor<AActor>();
+    UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
+    
+    apple->SetStaticMesh(OriginalMeshComp->GetStaticMesh());
+    apple->SetLocation(OriginalMeshComp->GetLocalLocation());
+    SpawnedActor->SetActorLocation(OriginalMeshComp->GetOwner()->GetActorLocation());
+    HighlightedMeshComp=apple;
+}
+void UWorld::RenderHighlightedComponent(FRenderer& Renderer, const FMatrix& VP)
+{
+    if (!HighlightedMeshComp || !HighlightedMeshComp->GetStaticMesh()) return;
+
+    const OBJ::FStaticMeshRenderData* RenderData = HighlightedMeshComp->GetStaticMesh()->GetRenderData();
+    if (!RenderData || RenderData->Vertices.IsEmpty() || RenderData->Indices.IsEmpty()) return;
+
+    const TArray<FVertexCompact>& Vertices = RenderData->Vertices;
+    const TArray<UINT>& Indices = RenderData->Indices;
+    const TArray<FObjMaterialInfo>& Materials = RenderData->Materials;
+    const TArray<FMaterialSubset>& Subsets = RenderData->MaterialSubsets;
+
+    // 버텍스/인덱스 버퍼 생성 (임시, 매 프레임 해도 될 정도로 가볍게)
+    ID3D11Buffer* VB = Renderer.CreateVertexBuffer(Vertices, Vertices.Num() * sizeof(FVertexCompact));
+    ID3D11Buffer* IB = Renderer.CreateIndexBuffer(Indices, Indices.Num() * sizeof(UINT));
+
+    if (!VB || !IB) return;
+
+    UINT stride = sizeof(FVertexCompact);
+    UINT offset = 0;
+    Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VB, &stride, &offset);
+    Renderer.Graphics->DeviceContext->IASetIndexBuffer(IB, DXGI_FORMAT_R32_UINT, 0);
+
+    FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
+        HighlightedMeshComp->GetWorldLocation(),
+        HighlightedMeshComp->GetWorldRotation(),
+        HighlightedMeshComp->GetWorldScale()*1.01f
+    );
+
+    FMatrix MVP = ModelMatrix * VP;
+    FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(ModelMatrix));
+    
+    // 서브셋별 렌더링 (여러 머티리얼 처리)
+    for (const FMaterialSubset& Subset : Subsets)
+    {
+        const FObjMaterialInfo& MatInfo = Materials[Subset.MaterialIndex];
+
+        Renderer.UpdateMaterial(MatInfo);
+        Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), true); // ⭐ Highlight On
+        Renderer.Graphics->DeviceContext->DrawIndexed(Subset.IndexCount, Subset.IndexStart, 0);
+    }
+    Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
+
+    // 직접 만든 버퍼 해제
+    VB->Release();
+    IB->Release();
+}
 void UWorld::BuildOctree()
 {
     FScopeCycleCounter Timer("BuildOctree");

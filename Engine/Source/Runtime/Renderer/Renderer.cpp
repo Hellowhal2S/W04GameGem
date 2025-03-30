@@ -1123,6 +1123,17 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
         RenderCollectedBatches(*this, View*Proj, RenderMap);
     }else World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
     
+    if (World->HighlightedMeshComp)
+    {
+        World->RenderHighlightedComponent(*this,View*Proj);
+    }
+    if (bDebugOctreeAABB)
+    DebugRenderOctreeNode(&UPrimitiveBatch::GetInstance(),World->SceneOctree->GetRoot(),5);
+    if (false)
+    for (const auto* MeshComp : TObjectRange<UStaticMeshComponent>())
+    {
+        UPrimitiveBatch::GetInstance().RenderAABB(MeshComp->WorldAABB,FVector::ZeroVector,FMatrix::Identity);
+    }
     FStatRegistry::RegisterResult(BatchTimer); 
 }
 void FRenderer::RenderVisibleComponents(UWorld* World,TArray<UPrimitiveComponent*>& VisibleComponents,FMatrix VP)

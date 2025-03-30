@@ -31,9 +31,9 @@ struct FVertexCompact
 {
     float x, y, z;               // 12 bytes
     uint16 u, v;                 // 4 bytes (압축된 UV, 0~65535)
+    inline FVector ToFVector() const;
 };
 static_assert(sizeof(FVertexCompact) == 16);
-
 inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
 {
     FVertexCompact Dst;
@@ -49,17 +49,16 @@ inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
     v = v * 0.5f + 0.5f;
 
     // 또는 만약 원래 0~1인데 Y축만 뒤집고 싶다면:
-    // v = 1.0f - v;
-
     Dst.u = static_cast<uint16>(FMath::Clamp(u, 0.0f, 1.0f) * 65535.0f + 0.5f);
     Dst.v = static_cast<uint16>(FMath::Clamp(v, 0.0f, 1.0f) * 65535.0f + 0.5f);
-    // UV: [0, 1] → [0, 65535]
-    //Dst.u = static_cast<uint16>(FMath::Clamp(Src.u, 0.0f, 1.0f) * 65535.0f);
-    //Dst.v = static_cast<uint16>(FMath::Clamp(Src.v, 0.0f, 1.0f) * 65535.0f);
+
 
     return Dst;
 }
-
+inline FVector FVertexCompact::ToFVector() const
+{
+    return FVector{x, y, z};
+}
 // Material Subset
 struct FMaterialSubset
 {
@@ -332,6 +331,10 @@ struct FBoundingBox
     FVector GetCenter() const
     {
         return (min + max) * 0.5f;
+    }
+    FVector GetExtents() const
+    {
+        return (max - min) * 0.5f;
     }
     // 단일 좌표가 박스 내에 있는지 검사
     bool Contains(const FVector& Point) const
