@@ -1123,7 +1123,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     FScopeCycleCounter BatchTimer("BatchTimer");
     //World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
 
-    TMap<FString, TArray<FRenderBatchData*>> RenderMap;
+    TMap<FString, TArray<FRenderBatchNodeData*>> RenderMap;
     World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderMap);
     // 2. 렌더링
     //RenderCollectedBatches(*this, View * Proj, RenderMap,World->SceneOctree->GetRoot()->CachedBatchData);

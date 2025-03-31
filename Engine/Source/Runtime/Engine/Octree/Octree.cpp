@@ -56,27 +56,6 @@ void FOctree::BuildFull()
     FStatRegistry::RegisterResult(Timer);
 }
 
-void FRenderBatchData::CreateBuffersIfNeeded(FRenderer& Renderer)
-{
-    if (!VertexBuffer && !Vertices.IsEmpty())
-    {
-        UE_LOG(LogLevel::Display, "CreateVBuffer %d", Vertices.Num() * sizeof(FVertexCompact));
-        VertexBuffer = Renderer.CreateVertexBuffer(Vertices, Vertices.Num() * sizeof(FVertexCompact));
-    }
-
-    if (!IndexBuffer && !Indices.IsEmpty())
-    {
-        UE_LOG(LogLevel::Display, "CreateIBuffer %d", Indices.Num() * sizeof(UINT));
-        IndexBuffer = Renderer.CreateIndexBuffer(Indices, Indices.Num() * sizeof(UINT));
-        IndicesNum = Indices.Num();
-    }
-
-    // Lazy 전략: CPU 메모리는 그대로 두거나, 아래처럼 제거할 수도 있음
-    // Vertices.Empty();
-    // Indices.Empty();
-    // Vertices.ShrinkToFit();
-    // Indices.ShrinkToFit();
-}
 
 FOctreeNode::FOctreeNode(const FBoundingBox& InBounds, int InDepth)
     : Bounds(InBounds)
@@ -89,9 +68,9 @@ FOctreeNode::~FOctreeNode()
 {
     for (int i = 0; i < 8; ++i)
         delete Children[i];
-    for (auto& Pair : CachedBatchData)
+    for (auto& Pair : CachedBatchRootData)
     {
-        FRenderBatchData& Batch = Pair.Value;
+        FRenderBatchRootData& Batch = Pair.Value;
         if (Batch.VertexBuffer)
         {
             Batch.VertexBuffer->Release();
@@ -353,102 +332,108 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
         }
     }
 }
-
-void FOctreeNode::BuildBatchRenderData()
+void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
 {
+    if (!RootNode)
+        RootNode = this; // 최초 호출 시 루트 노드로 설정
+
     VertexBufferSizeInBytes = 0;
     IndexBufferSizeInBytes = 0;
-    // Step 1. 자식 먼저 처리
+
+    if (bIsLeaf)
+    {
+        for (UPrimitiveComponent* Comp : Components)
+        {
+            UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(Comp);
+            if (!StaticMeshComp || !StaticMeshComp->GetStaticMesh()) continue;
+
+            OBJ::FStaticMeshRenderData* RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData();
+            const auto& MeshVertices = RenderData->Vertices;
+            const auto& MeshIndices = RenderData->Indices;
+            const auto& Materials = RenderData->Materials;
+            const auto& Subsets = RenderData->MaterialSubsets;
+
+            const FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
+                StaticMeshComp->GetWorldLocation(),
+                StaticMeshComp->GetWorldRotation(),
+                StaticMeshComp->GetWorldScale()
+            );
+
+            for (int i = 0; i < Subsets.Num(); ++i)
+            {
+                const auto& Subset = Subsets[i];
+                const auto& MatInfo = Materials[Subset.MaterialIndex];
+
+                FRenderBatchRootData& RootBatch = RootNode->CachedBatchRootData.FindOrAdd(MatInfo.MTLName);
+                UINT VertexStart = (UINT)RootBatch.Vertices.Num();
+                TMap<UINT, UINT> IndexMap;
+
+                for (UINT j = 0; j < Subset.IndexCount; ++j)
+                {
+                    UINT oldIndex = MeshIndices[Subset.IndexStart + j];
+                    if (!IndexMap.Contains(oldIndex))
+                    {
+                        FVertexCompact V = MeshVertices[oldIndex];
+                        FVector WorldPos = ModelMatrix.TransformPosition(FVector(V.x, V.y, V.z));
+                        V.x = WorldPos.x; V.y = WorldPos.y; V.z = WorldPos.z;
+
+                        RootBatch.Vertices.Add(V);
+                        IndexMap.Add(oldIndex, VertexStart++);
+                    }
+                    RootBatch.Indices.Add(IndexMap[oldIndex]);
+                }
+
+
+                FRenderBatchNodeData& MyBatch = CachedBatchNodeData.FindOrAdd(MatInfo.MTLName);
+                MyBatch.MaterialInfo = MatInfo;
+                MyBatch.IndicesNum += Subset.IndexCount;
+                MyBatch.OwnerNode = this;
+            }
+        }
+    }
+
+    // 자식 노드 재귀 호출
     for (int i = 0; i < 8; ++i)
     {
         if (Children[i])
         {
-            Children[i]->BuildBatchRenderData();
-            //if (Depth >= GRenderDepthMin)
-            for (const auto& Pair : Children[i]->CachedBatchData)
-            {
-                const FString& MaterialName = Pair.Key;
-                const FRenderBatchData& ChildData = Pair.Value;
-
-                FRenderBatchData& CurrentData = CachedBatchData.FindOrAdd(MaterialName);
-                CurrentData.MaterialInfo = ChildData.MaterialInfo;
-                CurrentData.OwnerNode = this;
-                UINT VertexOffset = (UINT)CurrentData.Vertices.Num();
-                CurrentData.Vertices.Append(ChildData.Vertices);
-
-                for (UINT Index : ChildData.Indices)
-                    CurrentData.Indices.Add(Index + VertexOffset);
-            }
+            Children[i]->BuildBatchRenderData(RootNode);
         }
     }
-    // Step 2. 본인 노드의 Components 처리
-    for (UPrimitiveComponent* Comp : Components)
+
+    // 자식들의 IndexCount를 합산하여 자신에게 설정
+    for (const auto& Pair : RootNode->CachedBatchRootData)
     {
-        UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(Comp);
-        if (!StaticMeshComp || !StaticMeshComp->GetStaticMesh()) continue;
+        const FString& MatName = Pair.Key;
+        uint32 TotalCount = 0;
 
-        OBJ::FStaticMeshRenderData* RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData();
-        const auto& MeshVertices = RenderData->Vertices;
-        const auto& MeshIndices = RenderData->Indices;
-
-        const auto& Materials = RenderData->Materials;
-        const auto& Subsets = RenderData->MaterialSubsets;
-
-        const FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
-            StaticMeshComp->GetWorldLocation(),
-            StaticMeshComp->GetWorldRotation(),
-            StaticMeshComp->GetWorldScale()
-        );
-
-        for (int i = 0; i < Subsets.Num(); ++i)
+        for (int i = 0; i < 8; ++i)
         {
-            const auto& Subset = Subsets[i];
-            const auto& MatInfo = Materials[Subset.MaterialIndex];
-
-            FRenderBatchData& Entry = CachedBatchData.FindOrAdd(MatInfo.MTLName);
-            Entry.MaterialInfo = MatInfo;
-            UINT VertexStart = (UINT)Entry.Vertices.Num();
-            TMap<UINT, UINT> IndexMap;
-
-            for (UINT j = 0; j < Subset.IndexCount; ++j)
-            {
-                UINT oldIndex = MeshIndices[Subset.IndexStart + j];
-                if (!IndexMap.Contains(oldIndex))
-                {
-                    //FVertexCompact TransformedVertex = ConvertToCompact(MeshVertices[oldIndex]);
-                    FVertexCompact TransformedVertex = MeshVertices[oldIndex];
-                    // 월드 위치 변환
-                    FVector LocalPosition{TransformedVertex.x, TransformedVertex.y, TransformedVertex.z};
-                    FVector WorldPosition = ModelMatrix.TransformPosition(LocalPosition);
-                    TransformedVertex.x = WorldPosition.x;
-                    TransformedVertex.y = WorldPosition.y;
-                    TransformedVertex.z = WorldPosition.z;
-
-                    Entry.Vertices.Add(TransformedVertex);
-
-                    IndexMap.Add(oldIndex, VertexStart++);
-                }
-                Entry.Indices.Add(IndexMap[oldIndex]);
-            }
+            if (!Children[i]) continue;
+            auto* ChildEntry = Children[i]->CachedBatchNodeData.Find(MatName);
+            if (ChildEntry)
+                TotalCount += ChildEntry->IndicesNum;
         }
-    }
-    // Step 3. 최종 버퍼 크기 계산 (현재 Vertex/Index는 FVertexCompact, uint32 기준)
-    for (const auto& Pair : CachedBatchData)
-    {
-        const FRenderBatchData& Batch = Pair.Value;
-        VertexBufferSizeInBytes += Batch.Vertices.Num() * sizeof(FVertexCompact);
-        IndexBufferSizeInBytes += Batch.Indices.Num() * sizeof(uint32);
+
+        if (TotalCount > 0)
+        {
+            FRenderBatchNodeData& MyBatch = CachedBatchNodeData.FindOrAdd(MatName);
+            MyBatch.MaterialInfo = MyBatch.MaterialInfo; // 상속용
+            MyBatch.IndicesNum += TotalCount;
+            MyBatch.OwnerNode = this;
+        }
     }
 }
+
 
 void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
 {
     FScopeCycleCounter Timer("BuildBatchBuffers");
     if (Depth == 0)
     {
-        for (auto& Pair : CachedBatchData)
+        for (auto& Pair : CachedBatchRootData)
         {
-            FRenderBatchData& RenderData = Pair.Value;
+            FRenderBatchRootData& RenderData = Pair.Value;
 
             if (!RenderData.Vertices.IsEmpty())
             {
@@ -461,8 +446,6 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
                 RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
                     RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
             }
-
-            RenderData.IndicesNum = RenderData.Indices.Num();
         }
     }
     FStatRegistry::RegisterResult(Timer);
@@ -470,9 +453,9 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
 
 void FOctreeNode::ClearBatchDatas()
 {
-    for (auto& Pair : CachedBatchData)
+    for (auto& Pair : CachedBatchRootData)
     {
-        FRenderBatchData& RenderData = Pair.Value;
+        FRenderBatchRootData& RenderData = Pair.Value;
         RenderData.Vertices.Empty();
         RenderData.Vertices.ShrinkToFit();
         RenderData.Indices.Empty();
@@ -504,7 +487,7 @@ void FOctreeNode::ClearKDDatas(int MaxDepthKD)
     }
 }
 
-void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap)
+void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchNodeData*>>& OutRenderMap)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
     if (Containment == EFrustumContainment::Contains ||
@@ -512,7 +495,7 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
     {
         if (Depth >= GRenderDepthMin)
         {
-            for (auto& Pair : CachedBatchData)
+            for (auto& Pair : CachedBatchNodeData)
             {
                 const FString& MatName = Pair.Key;
                 const FDrawRange* Range = DrawRanges.Find(MatName);
@@ -529,14 +512,14 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
             Children[i]->CollectRenderNodes(Frustum, OutRenderMap);
     }
 }
-void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap,
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchNodeData*>>& RenderMap,
                             const FOctreeNode* RootNode)
 {
-    //std::string DebugText = RootNode->DumpDrawRangesRecursive(3);
+    std::string DebugText = RootNode->DumpDrawRangesRecursive(3);
     
     if (!RootNode) return;
 
-    const TMap<FString, FRenderBatchData>& RootBatches = RootNode->CachedBatchData;
+    const TMap<FString, FRenderBatchRootData>& RootBatches = RootNode->CachedBatchRootData;
 
     FMatrix MVP = FMatrix::Identity * VP;
     FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
@@ -545,14 +528,14 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
     for (const auto& Pair : RenderMap)
     {
         const FString& MaterialName = Pair.Key;
-        const TArray<FRenderBatchData*>& Batches = Pair.Value;
+        const TArray<FRenderBatchNodeData*>& Batches = Pair.Value;
 
-        const FRenderBatchData* RootBatch = RootBatches.Find(MaterialName);
-        if (!RootBatch || !RootBatch->VertexBuffer || !RootBatch->IndexBuffer || RootBatch->IndicesNum == 0)
+        const FRenderBatchRootData* RootBatch = RootBatches.Find(MaterialName);
+        if (!RootBatch || !RootBatch->VertexBuffer || !RootBatch->IndexBuffer)
             continue;
 
         // 머티리얼 한 번 설정
-        Renderer.UpdateMaterial(RootBatch->MaterialInfo);
+        Renderer.UpdateMaterial(Batches[0]->MaterialInfo);
 
         // 루트의 버퍼 바인딩 (한 번만)
         UINT offset = 0;
@@ -560,7 +543,7 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
         Renderer.Graphics->DeviceContext->IASetIndexBuffer(RootBatch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
         // 각 Batch → OwnerNode → DrawRange 기반으로 Draw
-        for (FRenderBatchData* Batch : Batches)
+        for (FRenderBatchNodeData* Batch : Batches)
         {
             if (!Batch || !Batch->OwnerNode)
                 continue;
@@ -569,7 +552,6 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
             if (!Range || Range->IndexCount == 0)
                 continue;
 
-            Batch->LastUsedFrame = GCurrentFrame;
             Renderer.Graphics->DeviceContext->DrawIndexed(Range->IndexCount, Range->IndexStart, 0);
         }
     }
@@ -577,9 +559,9 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
 
 void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
 {
-    for (auto& Pair : CachedBatchData)
+    for (auto& Pair : CachedBatchRootData)
     {
-        FRenderBatchData& Data = Pair.Value;
+        FRenderBatchRootData& Data = Pair.Value;
 
         // 사용된 지 오래된 경우 메모리 해제
         if (Data.VertexBuffer && (CurrentFrame - Data.LastUsedFrame > FrameThreshold))
@@ -632,33 +614,33 @@ void FOctreeNode::AssignAllDrawRanges()
 */
 void FOctreeNode::AssignAllDrawRanges()
 {
-    for (const auto& Pair : CachedBatchData)
+    for (const auto& Pair : CachedBatchNodeData)
     {
         const FString& MatName = Pair.Key;
-        const FRenderBatchData& Batch = Pair.Value;
+        const FRenderBatchNodeData& Batch = Pair.Value;
 
         FDrawRange Range;
         Range.IndexStart = 0;
-        Range.IndexCount = Batch.Indices.Num();
+        Range.IndexCount = Batch.IndicesNum;
 
         DrawRanges.Add(MatName, Range);
     }
 
     // 각 머티리얼에 대해 자식들에게 분배
-    for (const auto& Pair : CachedBatchData)
+    for (const auto& Pair : CachedBatchNodeData)
     {
         const FString& MatName = Pair.Key;
-        const FRenderBatchData& Batch = Pair.Value;
+        const FRenderBatchNodeData& Batch = Pair.Value;
 
         uint32 RunningStart = 0;
 
         for (int i = 0; i < 8; ++i)
         {
             if (!Children[i]) continue;
-            auto* ChildBatch = Children[i]->CachedBatchData.Find(MatName);
+            auto* ChildBatch = Children[i]->CachedBatchNodeData.Find(MatName);
             if (!ChildBatch) continue;
 
-            uint32 Count = ChildBatch->Indices.Num();
+            uint32 Count = ChildBatch->IndicesNum;
             if (Count == 0) continue;
 
             FDrawRange ChildRange { RunningStart, Count };
@@ -674,17 +656,17 @@ void FOctreeNode::AssignAllDrawRanges()
 void FOctreeNode::ComputeDrawRangesFromParent(const TMap<FString, FDrawRange>& InRanges)
 {
     // 1. 본인 DrawRange 설정
-    for (auto& Pair : CachedBatchData)
+    for (auto& Pair : CachedBatchNodeData)
     {
         const FString& MatName = Pair.Key;
-        const FRenderBatchData& MyBatch = Pair.Value;
+        const FRenderBatchNodeData& MyBatch = Pair.Value;
 
         const FDrawRange* RangeFromParent = InRanges.Find(MatName);
         if (!RangeFromParent) continue;
 
         FDrawRange& MyRange = DrawRanges.FindOrAdd(MatName);
         MyRange.IndexStart = RangeFromParent->IndexStart;
-        MyRange.IndexCount = MyBatch.Indices.Num();
+        MyRange.IndexCount = MyBatch.IndicesNum;
     }
 
     // 2. 자식에게 머티리얼별로 정확히 나눠서 전달
@@ -699,10 +681,10 @@ void FOctreeNode::ComputeDrawRangesFromParent(const TMap<FString, FDrawRange>& I
         {
             if (!Children[i]) continue;
 
-            FRenderBatchData* ChildBatch = Children[i]->CachedBatchData.Find(MatName);
+            FRenderBatchNodeData* ChildBatch = Children[i]->CachedBatchNodeData.Find(MatName);
             if (!ChildBatch) continue;
 
-            uint32 Count = ChildBatch->Indices.Num();
+            uint32 Count = ChildBatch->IndicesNum;
             if (Count == 0) continue;
 
             FDrawRange ChildRange;
