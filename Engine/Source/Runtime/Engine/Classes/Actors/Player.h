@@ -16,14 +16,20 @@ class AEditorPlayer : public AActor
     virtual void Tick(float DeltaTime) override;
 
     void Input();
+    void HandleLeftClick();
+    void TryPickActor();
+
     bool PickGizmo(FVector& rayOrigin);
     void PickActor(const FVector& pickPosition);
     void AddControlMode();
     void AddCoordiMode();
+    void GetMousePositionClient(int& OutX, int& OutY);
 
 private:
     int RayIntersectsObject(const FVector& pickPosition, USceneComponent* obj, float& hitDistance, int& intersectCount);
     void ScreenToViewSpace(int screenX, int screenY, const FMatrix& viewMatrix, const FMatrix& projectionMatrix, FVector& rayOrigin);
+
+
     void PickedObjControl();
     void ControlRotation(USceneComponent* pObj, UGizmoBaseComponent* Gizmo, int32 deltaX, int32 deltaY);
     void ControlTranslation(USceneComponent* pObj, UGizmoBaseComponent* Gizmo, int32 deltaX, int32 deltaY);

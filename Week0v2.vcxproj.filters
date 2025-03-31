@@ -120,37 +120,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Source\Editor\Outliner.cpp">
-      <Filter>Engine\Source\Editor</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Source\Editor\Outliner.h">
-      <Filter>Engine\Source\Editor</Filter>
-    </ClInclude>
-    <ClCompile Include="Engine\Source\Editor\PropertyEditor\ControlPanel.cpp">
-      <Filter>Engine\Source\Editor\PropertyEditor</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Source\Editor\PropertyEditor\ControlPanel.h">
-      <Filter>Engine\Source\Editor\PropertyEditor</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Source\Editor\PropertyEditor\IWindowToggleable.h">
-      <Filter>Engine\Source\Editor\PropertyEditor</Filter>
-    </ClInclude>
-    <ClCompile Include="Engine\Source\Editor\PropertyEditor\PropertyPanel.cpp">
-      <Filter>Engine\Source\Editor\PropertyEditor</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Source\Editor\PropertyEditor\PropertyPanel.h">
       <Filter>Engine\Source\Editor\PropertyEditor</Filter>
     </ClInclude>
     <ClCompile Include="Engine\Source\Editor\PropertyEditor\ShowFlags.cpp">
       <Filter>Engine\Source\Editor\PropertyEditor</Filter>
     </ClCompile>
     <ClInclude Include="Engine\Source\Editor\PropertyEditor\ShowFlags.h">
-      <Filter>Engine\Source\Editor\PropertyEditor</Filter>
-    </ClInclude>
-    <ClCompile Include="Engine\Source\Editor\PropertyEditor\ViewModeDropdown.cpp">
-      <Filter>Engine\Source\Editor\PropertyEditor</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Source\Editor\PropertyEditor\ViewModeDropdown.h">
       <Filter>Engine\Source\Editor\PropertyEditor</Filter>
     </ClInclude>
     <ClCompile Include="Engine\Source\Editor\UnrealEd\EditorViewportClient.cpp">
@@ -232,12 +208,6 @@
       <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
     </ClCompile>
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\LightComponent.h">
-      <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
-    </ClInclude>
-    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Player.cpp">
-      <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Player.h">
       <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
     </ClInclude>
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\PrimitiveComponent.cpp">
@@ -444,6 +414,19 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\UnrealClient.cpp" />
     <ClCompile Include="Engine\Source\Runtime\SlateCore\Widgets\SWindow.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\tinyfiledialogs\tinyfiledialogs.cpp" />
+    <ClCompile Include="Engine\Source\Editor\PropertyEditor\ProfilingEditorPanel.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectArray.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectHash.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\Frustum.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\Ray.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\Vector.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\ActorEditor.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Actors\Player.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Octree\Octree.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\GameFramework\Actor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Source\ThirdParty\DirectXTK\Include\DDSTextureLoader.h" />
@@ -494,6 +477,26 @@
     <ClInclude Include="Engine\Source\Runtime\SlateCore\Widgets\SWindow.h" />
     <ClInclude Include="Engine\Source\Runtime\Slate\Widgets\Layout\SSplitter.h" />
     <ClInclude Include="Engine\Source\ThirdParty\tinyfiledialogs\tinyfiledialogs.h" />
+    <ClInclude Include="Engine\Source\Editor\PropertyEditor\ProfilingEditorPanel.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Frustum.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Ray.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Octree\Octree.h" />
+    <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\NameTypes.h" />
+    <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectArray.h" />
+    <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectHash.h" />
+    <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectIterator.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\EngineTypes.h" />
+    <ClInclude Include="Engine\Source\Runtime\Launch\EngineBaseTypes.h" />
+    <ClInclude Include="Engine\Source\Runtime\Launch\EngineLoop.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Vector.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Matrix.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Quat.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Vector4.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Actors\Player.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\GameFramework\Actor.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelTextureShader.hlsl">
@@ -514,6 +517,8 @@
     <FxCompile Include="Shaders\StaticMeshPixelShader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\CompactMeshPixelShader.hlsl" />
+    <FxCompile Include="Shaders\CompactMeshVertexShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Week0v2.natvis" />

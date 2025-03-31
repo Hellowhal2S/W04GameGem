@@ -6,8 +6,10 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "KDTree/KDTree.h"
 #include "Math/Frustum.h"
 #include "Math/JungleMath.h"
+#include "Math/Ray.h"
 #include "Profiling/PlatformTime.h"
 #include "Profiling/StatRegistry.h"
 #include "UnrealEd/PrimitiveBatch.h"
@@ -41,6 +43,7 @@ FOctreeNode::FOctreeNode(const FBoundingBox& InBounds, int InDepth)
     : Bounds(InBounds)
     , Depth(InDepth)
 {
+    BoundingSphere = Bounds.GetBoundingSphere(true);
 }
 
 FOctreeNode::~FOctreeNode()
@@ -64,7 +67,6 @@ FOctreeNode::~FOctreeNode()
         Batch.Indices.Empty();
         Batch.Vertices.ShrinkToFit();
         Batch.Indices.ShrinkToFit();
-        
     }
 }
 
@@ -117,23 +119,41 @@ void FOctreeNode::Insert(UPrimitiveComponent* Component, int MaxDepth)
     Components.Add(Component);
 }
 
-void FOctreeNode::Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const
+void FOctreeNode::BuildOverlappingRecursive(UPrimitiveComponent* Component)
 {
-    if (!Frustum.Intersect(Bounds)) return;
-
-    if (!bIsLeaf)
+    if (!Bounds.Overlaps(Component->WorldAABB))
+        return;
+    
+    OverlappingComponents.Add(Component);
+    for (int i = 0; i < 8; ++i)
     {
-        for (int i = 0; i < 8; ++i)
+        if (Children[i])
+            Children[i]->BuildOverlappingRecursive(Component);
+    }
+}
+
+void FOctreeNode::BuildKDTreeRecursive()
+{
+    // 리프 + 조건 만족 시 KDTree 생성
+    if (/*Depth == MaxDepthKD && */!KDTree)
+    {
+        TArray<UStaticMeshComponent*> StaticMeshComps;
+        //CollectStaticMeshesRecursive(StaticMeshComps);
+        for (auto i : OverlappingComponents)
         {
-            if (Children[i])
-                Children[i]->Query(Frustum, OutResults);
+            StaticMeshComps.Add(dynamic_cast<UStaticMeshComponent*>(i));
+        }
+        if (!StaticMeshComps.IsEmpty())
+        {
+            KDTree = new FKDTreeNode();
+            KDTree->Build(StaticMeshComps);
         }
     }
 
-    for (UPrimitiveComponent* Comp : Components)
+    for (int i = 0; i < 8; ++i)
     {
-        if (Frustum.Intersect(Comp->WorldAABB))
-            OutResults.Add(Comp);
+        if (Children[i])
+            Children[i]->BuildKDTreeRecursive();
     }
 }
 
@@ -146,6 +166,42 @@ FOctree::~FOctree()
 {
     delete Root;
 }
+void FOctree::BuildFull()
+{
+    FScopeCycleCounter Timer("BuildFullOctree");
+
+    FVector MinBound(FLT_MAX, FLT_MAX, FLT_MAX);
+    FVector MaxBound(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+    // Step 1. 전체 Bounds 계산
+    for (const auto* SceneComp : TObjectRange<USceneComponent>())
+    {
+        if (const auto* MeshComp = Cast<UMeshComponent>(SceneComp))
+        {
+            auto* PrimComp = Cast<UPrimitiveComponent>(MeshComp);
+            PrimComp->UpdateWorldAABB();
+            const FBoundingBox& AABB = MeshComp->WorldAABB;
+
+            MinBound = FVector::Min(MinBound, AABB.min);
+            MaxBound = FVector::Max(MaxBound, AABB.max);
+        }
+    }
+
+    delete Root;
+    Root = new FOctreeNode(FBoundingBox(MinBound, MaxBound), 0);
+
+    // Step 2. 노드 삽입
+    Build();
+
+    // Step 3. KDTree 및 렌더링 데이터 구축
+    Root->BuildKDTreeRecursive();
+    Root->BuildBatchRenderData();
+    Root->BuildBatchBuffers(FEngineLoop::renderer);
+    Root->ClearBatchDatas();
+    Root->ClearKDDatas(MaxDepthKD);
+
+    FStatRegistry::RegisterResult(Timer);
+}
 
 void FOctree::Build()
 {
@@ -155,14 +211,125 @@ void FOctree::Build()
         {
             PrimComp->UpdateWorldAABB();
             Root->Insert(PrimComp);
+            Root->BuildOverlappingRecursive(PrimComp);
         }
     }
 }
 
-void FOctree::QueryVisible(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const
+UPrimitiveComponent* FOctree::Raycast(const FRay& Ray, float& OutHitDistance) const
 {
-    Root->Query(Frustum, OutResults);
+    if (!Root) return nullptr;
+    if (bUseKD) return Root->RaycastWithKD(Ray, OutHitDistance,MaxDepthKD);
+    else return Root->Raycast(Ray, OutHitDistance);
 }
+
+//불용
+UPrimitiveComponent* FOctreeNode::Raycast(const FRay& Ray, float& OutDistance) const
+{
+    float NodeHitDist;
+    if (!RayIntersectsAABB(Ray, Bounds, NodeHitDist)) return nullptr;
+    //if (!IntersectRaySphere(Ray.Origin, Ray.Direction, BoundingSphere, NodeHitDist)) return nullptr;
+
+    UPrimitiveComponent* ClosestComponent = nullptr;
+    float ClosestDistance = FLT_MAX;
+
+    // 1. Leaf Node → OverlappingComponents 검사
+    if (bIsLeaf)
+    {
+        for (UPrimitiveComponent* Comp : OverlappingComponents)
+        {
+            float HitDist = 0.0f;
+            if (IntersectRaySphere(Ray.Origin, Ray.Direction, Comp->BoundingSphere, HitDist))
+            {
+                if (HitDist < ClosestDistance)
+                {
+                    ClosestDistance = HitDist;
+                    ClosestComponent = Comp;
+                }
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            if (Children[i])
+            {
+                float ChildHitDist = FLT_MAX;
+                UPrimitiveComponent* HitComp = Children[i]->Raycast(Ray, ChildHitDist);
+                if (HitComp && ChildHitDist < ClosestDistance)
+                {
+                    ClosestComponent = HitComp;
+                    ClosestDistance = ChildHitDist;
+                }
+            }
+        }
+    }
+
+    OutDistance = ClosestDistance;
+    return ClosestComponent;
+}
+
+UPrimitiveComponent* FOctreeNode::RaycastWithKD(const FRay& Ray, float& OutDistance, int MaxDepthKD) const
+{
+    float NodeHitDist;
+    if (!RayIntersectsAABB(Ray, Bounds, NodeHitDist))
+        return nullptr;
+
+    // 리프 노드: KD 트리 사용
+    if (Depth == MaxDepthKD)
+    {
+        if (KDTree)
+        {
+            float HitDist = FLT_MAX;
+            UPrimitiveComponent* KDHit = KDTree->Raycast(Ray, HitDist);
+            if (KDHit)
+            {
+                OutDistance = HitDist;
+                return KDHit; // ✅ 바로 종료
+            }
+        }
+
+        return nullptr;
+    }
+
+    // 내부 노드: 자식 노드를 정렬하여 거리순으로 검사
+    struct FChildAndDist
+    {
+        const FOctreeNode* Node;
+        float Dist;
+
+        bool operator<(const FChildAndDist& Other) const { return Dist < Other.Dist; }
+    };
+
+    TArray<FChildAndDist> SortedChildren;
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+        {
+            const FVector Center = Children[i]->Bounds.GetCenter();
+            float Dist = (Center - Ray.Origin).Magnitude();  // 또는 Dot으로 방향성 포함
+            SortedChildren.Add({ Children[i], Dist });
+        }
+    }
+
+    SortedChildren.Sort();
+
+    // 거리순으로 탐색 → 가장 가까운 곳에서 Hit 되면 종료
+    for (const FChildAndDist& Entry : SortedChildren)
+    {
+        float ChildHitDist = FLT_MAX;
+        UPrimitiveComponent* HitComp = Entry.Node->RaycastWithKD(Ray, ChildHitDist, MaxDepthKD);
+        if (HitComp)
+        {
+            OutDistance = ChildHitDist;
+            return HitComp; // ✅ 가장 가까운 곳에서 Hit되면 바로 반환
+        }
+    }
+
+    return nullptr;
+}
+
 
 void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node, int MaxDepth)
 {
@@ -302,7 +469,7 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
     FStatRegistry::RegisterResult(Timer);
 }
 
-void FOctreeNode::ClearBatchDatas(FRenderer& Renderer)
+void FOctreeNode::ClearBatchDatas()
 {
     for (auto& Pair : CachedBatchData)
     {
@@ -316,10 +483,26 @@ void FOctreeNode::ClearBatchDatas(FRenderer& Renderer)
     for (int i = 0; i < 8; ++i)
     {
         if (Children[i])
-            Children[i]->ClearBatchDatas(Renderer);
+            Children[i]->ClearBatchDatas();
     }
 }
-
+void FOctreeNode::ClearKDDatas(int MaxDepthKD)
+{
+    if (Depth!=MaxDepthKD)
+    {
+        delete KDTree;
+        KDTree=nullptr;
+        OverlappingComponents.Empty();
+        OverlappingComponents.ShrinkToFit();
+    }
+    Components.Empty();
+    Components.ShrinkToFit();
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+            Children[i]->ClearKDDatas(MaxDepthKD);
+    }
+}
 void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
@@ -372,57 +555,6 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
             Renderer.Graphics->DeviceContext->IASetIndexBuffer(Batch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
             Renderer.Graphics->DeviceContext->DrawIndexed(Batch->IndicesNum, 0, 0);
         }
-    }
-}
-
-void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP)
-{
-    EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
-    if (Containment == EFrustumContainment::Contains || Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax)
-    {
-        if (Depth >= GRenderDepthMin)
-        {
-            UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
-                   Depth, CachedBatchData.Num());
-
-            for (auto& Pair : CachedBatchData) // ← 수정: const 제거
-            {
-                FRenderBatchData& RenderData = Pair.Value;
-
-                // 🟡 Lazy 생성: 필요한 경우에만 생성
-                FScopeCycleCounter Timer("CreateBuffers");
-                RenderData.CreateBuffersIfNeeded(Renderer);
-                FStatRegistry::RegisterResult(Timer);
-
-                if (!RenderData.VertexBuffer || !RenderData.IndexBuffer)
-                    continue;
-
-                // ✅ 사용 시점 기록
-                RenderData.LastUsedFrame = GCurrentFrame;
-
-                // 머티리얼 설정
-                Renderer.UpdateMaterial(RenderData.MaterialInfo);
-
-                // 버퍼 설정
-                UINT offset = 0;
-                Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RenderData.VertexBuffer, &Renderer.Stride, &offset);
-                Renderer.Graphics->DeviceContext->IASetIndexBuffer(RenderData.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-                // 상수 버퍼 설정
-                FMatrix MVP = FMatrix::Identity * VP;
-                FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
-                Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
-
-                Renderer.Graphics->DeviceContext->DrawIndexed(RenderData.IndicesNum, 0, 0);
-            }
-            return;
-        }
-    }
-
-    for (int i = 0; i < 8; ++i)
-    {
-        if (Children[i])
-            Children[i]->RenderBatches(Renderer, Frustum, VP);
     }
 }
 

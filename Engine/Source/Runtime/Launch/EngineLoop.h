@@ -3,6 +3,7 @@
 #include "D3D11RHI/GraphicDevice.h"
 #include "Renderer/Renderer.h"
 #include "Engine/ResourceMgr.h"
+#include "UnrealEd/SceneMgr.h"
 
 class UnrealEd;
 class UImGuiManager;
@@ -43,6 +44,8 @@ private:
     UWorld* GWorld;
     SLevelEditor* LevelEditor;
     UnrealEd* UnrealEditor;
+    FSceneMgr* SceneMgr;
+    
     bool bIsExit = false;
     const int32 targetFPS = 240;
     bool bTestInput = false;
@@ -51,4 +54,5 @@ public:
     UWorld* GetWorld() const { return GWorld; }
     SLevelEditor* GetLevelEditor() const { return LevelEditor; }
     UnrealEd* GetUnrealEditor() const { return UnrealEditor; }
+    FSceneMgr* GetSceneManager() const { return SceneMgr; }
 };

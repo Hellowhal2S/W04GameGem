@@ -187,6 +187,7 @@
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Frustum.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\JungleMath.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\SIMD\SimdUtility.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\Ray.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Vector.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.cpp" />
@@ -195,6 +196,8 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\ActorComponent.cpp" />
     <ClCompile Include="Engine\Source\Editor\UnrealEd\EditorViewportClient.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\KDTree\KDTree.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\KDTree\KDTreeSystem.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Octree\Octree.cpp">
       <AssemblerOutput>NoListing</AssemblerOutput>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
@@ -340,9 +343,12 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\DelegateCombination.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Frustum.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\SIMD\SimdUtility.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Ray.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\KDTree\KDTree.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\KDTree\KDTreeSystem.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Octree\Octree.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\ViewportClient.h" />
     <ClInclude Include="Engine\Source\Editor\LevelEditor\SLevelEditor.h" />

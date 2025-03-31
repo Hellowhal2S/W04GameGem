@@ -35,7 +35,9 @@ public:
     static const TMap<uint32, double>& GetStatMap() { return StatMap; }
 	
 	static FFPSStats GetFPSStats(const TStatId& StatId);
-	static void SetMainFrameStat(const TStatId& StatId);
+    static void SetMainFrameStat(const TStatId& StatId);
+    static int TotalPickCount;
+    static double TotalPickTime;
 private:
     inline static TMap<uint32, double> StatMap; // ← GetDisplayIndex 기반으로 저장
 	inline static FStatFPSRecord MainFrameRecord;

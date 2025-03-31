@@ -10,6 +10,8 @@
 #include "Engine/FLoaderOBJ.h"
 #include "Engine/StaticMeshActor.h"
 #include "ImGUI/imgui_internal.h"
+#include "KDTree/KDTree.h"
+#include "KDTree/KDTreeSystem.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "Octree/Octree.h"
 #include "Profiling/StatRegistry.h"
@@ -85,8 +87,8 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
     
     if (bOpenMenu)
     {
-        std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
-
+        //std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
+        FSceneMgr* SceneMgr=GEngineLoop.GetSceneManager();
         ImGui::SetNextWindowPos(ImVec2(10, 55), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(135, 170), ImGuiCond_Always);
         
@@ -108,18 +110,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
                 ImGui::End();
                 return;
             }
-
-            // TODO: Load Scene
-            FString NewFile = SceneMgr->LoadSceneFromFile(FileName);
-            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
-            GEngineLoop.GetWorld()->ClearScene();
-            SceneMgr->ParseSceneData(NewFile);
-            GEngineLoop.GetWorld()->BuildOctree();
-            //while (!NewData.Cameras.IsEmpty())
-            //{
-            //    const std::unique_ptr<Camear
-            //}
-
+            GEngineLoop.GetWorld()->ReloadScene(FileName);
         }
 
         ImGui::Separator();

@@ -26,7 +26,6 @@ struct FMatrix
     static FVector4 TransformVector(const FVector4& v, const FMatrix& m);
     static FMatrix CreateTranslationMatrix(const FVector& position);
 
-
     DirectX::XMMATRIX ToXMMATRIX() const
     {
         return DirectX::XMMatrixSet(
@@ -105,4 +104,17 @@ struct FMatrix
     FVector4 Col2() const { return FVector4(M[0][1], M[1][1], M[2][1], M[3][1]); }
     FVector4 Col3() const { return FVector4(M[0][2], M[1][2], M[2][2], M[3][2]); }
     FVector4 Col4() const { return FVector4(M[0][3], M[1][3], M[2][3], M[3][3]); }
+};
+
+    FVector GetColumn(int columnIndex) const
+	{
+	    if (columnIndex < 0 || columnIndex > 3)
+	        return FVector::ZeroVector;
+
+	    return FVector{
+	        M[0][columnIndex],
+            M[1][columnIndex],
+            M[2][columnIndex]
+        };
+	}
 };

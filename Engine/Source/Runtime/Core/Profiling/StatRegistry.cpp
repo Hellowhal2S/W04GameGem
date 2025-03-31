@@ -2,6 +2,8 @@
 #include "StatRegistry.h"
 
 #include "PlatformTime.h"
+int FStatRegistry::TotalPickCount=0;
+double FStatRegistry::TotalPickTime=0.0;
 void FStatRegistry::RegisterResult(const TStatId& StatId, double InMilliseconds)
 {
 	const uint32 Key = StatId.GetId();
