@@ -330,6 +330,15 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
     if (Containment == EFrustumContainment::Contains ||
         (Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax))
     {
+        bool temp = GOcclusionSystem->IsRegionVisible(NodeId);
+
+        if (!GOcclusionSystem->IsRegionVisible(NodeId))
+        {
+            int a = 1;
+            UE_LOG(LogLevel::Error, "%d",temp);
+            return;
+        }
+
         if (Depth >= GRenderDepthMin)
         {
             for (auto& Pair : CachedBatchData)
@@ -379,8 +388,6 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
     }
 }
 
-int cnt1 = 0;
-int cnt2 = 0;
 void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
@@ -388,10 +395,8 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
     {
         if (!GOcclusionSystem->IsRegionVisible(NodeId))
         {
-            cnt2++;
             return;
         }
-        cnt1++;
 
         if (Depth >= GRenderDepthMin)
         {
@@ -469,37 +474,33 @@ void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
     }
 }
 
-void FOctreeNode::QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum, bool bParentVisible)
+void FOctreeNode::QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum)
 {
-    if (!bParentVisible)
-        return;
-
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
-    if (Containment == EFrustumContainment::Contains || (Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax))
+    if (Containment == EFrustumContainment::Contains || Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax)
     {
         if (NodeId == 0)
             NodeId = MakeNodeId(Bounds);
 
-        if (GOcclusionSystem->QueriesThisFrame >= MaxQueriesPerFrame)
-            return;
+        //if (GOcclusionSystem->QueriesThisFrame >= MaxQueriesPerFrame)
+        //    return;
 
         // Z-Depth 기반 Occlusion Query 등록
         GOcclusionSystem->QueryRegion(NodeId, Bounds, Context, [&](const FBoundingBox& Box) {
-            Renderer.RenderOcclusionBox(Box);
+            Renderer.RenderOcclusionBox(Box, 1.1f);
             });
 
-        GOcclusionSystem->QueriesThisFrame++;
+        //GOcclusionSystem->QueriesThisFrame++;
 
         if (!GOcclusionSystem->IsRegionVisible(NodeId))
             return;
 
-        bool bVisible = GOcclusionSystem->IsRegionVisible(NodeId);
+    }
 
-        // 재귀 처리
-        for (int i = 0; i < 8; ++i)
-        {
-            if (Children[i])
-                Children[i]->QueryOcclusion(Renderer, Context, Frustum, bVisible);
-        }
+    // 재귀 처리
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+            Children[i]->QueryOcclusion(Renderer, Context, Frustum);
     }
 }

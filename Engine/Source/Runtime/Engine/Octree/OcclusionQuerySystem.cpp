@@ -43,11 +43,10 @@ void OcclusionQuerySystem::QueryRegion(
         context->Begin(region.Query);
         DrawFunc(bounds);
         context->End(region.Query);
+
         region.LastQueryFrame = m_currentFrame;
     }
 }
-int count1 = 0;
-int count2 = 0;
 
 void OcclusionQuerySystem::EndFrame(ID3D11DeviceContext* context)
 {
@@ -67,15 +66,6 @@ void OcclusionQuerySystem::EndFrame(ID3D11DeviceContext* context)
             region.Visible = samples > 0;
             region.LastValidFrame = m_currentFrame;
         }
-
-        if (region.Visible)
-        {
-            count1++;
-        }
-        else
-        {
-            count2++;
-        }
     }
 }
 
@@ -87,7 +77,10 @@ bool OcclusionQuerySystem::IsRegionVisible(int id) const
 
     const RegionData& region = it->second;
     if (((m_currentFrame - region.LastValidFrame) > kFallbackMaxAge))
+    {
         return true; // 오래된 프레임은 보이는 것으로 간주
+    }
+
 
     return region.Visible;
 }

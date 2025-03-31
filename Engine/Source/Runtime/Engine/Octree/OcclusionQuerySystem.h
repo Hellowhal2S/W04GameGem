@@ -6,6 +6,8 @@
 #include "Define.h"
 #include "Math.h"
 
+#include <Renderer/Renderer.h>
+
 struct RegionData {
     FBoundingBox Bounds;
     ID3D11Query* Query = nullptr;
@@ -13,6 +15,12 @@ struct RegionData {
     int LastQueryFrame = -1000;
     int LastValidFrame = -1;
     bool HasResult = false;
+};
+
+struct FOcclusionDrawCommand
+{
+    ID3D11Query* Query;
+    FBoundingBox Bounds;
 };
 
 class OcclusionQuerySystem {
@@ -31,7 +39,9 @@ public:
     void EndFrame(ID3D11DeviceContext* context);
 
     bool IsRegionVisible(int id) const;
-    int QueriesThisFrame = 0;
+    void FlushDeferredDraws(FRenderer& Renderer, ID3D11DeviceContext* context);
+    int QueriesThisFrame;
+
 
 private:
     ID3D11Device* m_device;
@@ -43,7 +53,7 @@ private:
 
     int successCnt = 0;
     int failureCnt = 0;
-
+    std::vector<FOcclusionDrawCommand> DeferredDrawCommands;
 };
 
 extern OcclusionQuerySystem* GOcclusionSystem; // 외부에서 전역 관리

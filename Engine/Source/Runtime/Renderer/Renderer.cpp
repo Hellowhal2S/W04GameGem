@@ -1129,10 +1129,15 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     Graphics->DeviceContext->UpdateSubresource(cbViewProj, 0, nullptr, &ViewProj, 0, 0);
     SetOcclusionRenderState();
 
+    // Occlusion 박스 렌더링
+    RenderOcclusionBox(World->SceneOctree->GetRoot()->Bounds, 1.0f);
+
     // Occlusion 쿼리 등록
-    World->SceneOctree->GetRoot()->QueryOcclusion(*this, Graphics->DeviceContext, Frustum, true);
+    World->SceneOctree->GetRoot()->QueryOcclusion(*this, Graphics->DeviceContext, Frustum);
+    //GOcclusionSystem->FlushDeferredDraws(*this, Graphics->DeviceContext);
 
     Graphics->RestoreDefaultRenderState();
+
     // Occlusion EndFrame
     GOcclusionSystem->EndFrame(Graphics->DeviceContext);
 
@@ -1150,7 +1155,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
         // 2. 렌더링
         RenderCollectedBatches(*this, View*Proj, RenderMap);
     }else World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
-    
+
     FStatRegistry::RegisterResult(BatchTimer); 
 }
 void FRenderer::RenderVisibleComponents(UWorld* World,TArray<UPrimitiveComponent*>& VisibleComponents,FMatrix VP)
@@ -1459,7 +1464,7 @@ void FRenderer::CreateOcclusion()
 
     D3D11_DEPTH_STENCIL_DESC dsDesc = {};
     dsDesc.DepthEnable = true;
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // Depth write off
+    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; // Depth write off
     dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
     Graphics->Device->CreateDepthStencilState(&dsDesc, &DepthTestOnlyState);
 
@@ -1469,11 +1474,11 @@ void FRenderer::CreateOcclusion()
     Graphics->Device->CreateRasterizerState(&rsDesc, &OcclusionRasterizerState);
 }
 
-void FRenderer::RenderOcclusionBox(const FBoundingBox& bounds)
+void FRenderer::RenderOcclusionBox(const FBoundingBox& bounds, int boxScale)
 {
     // 2. 모델 변환 행렬 계산 (Scale + Translation)
     FVector center = (bounds.min + bounds.max) * 0.5f;
-    FVector scale = bounds.max - bounds.min;
+    FVector scale = (bounds.max - bounds.min) * boxScale;
     FMatrix world = JungleMath::CreateModelMatrix(center, FVector::ZeroVector, scale);
 
     // 3. 상수 버퍼에 World, ViewProj 설정

@@ -291,6 +291,8 @@
       <LinkCompiled>true</LinkCompiled>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MultiThreadedDebugDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ClCompile Include="Engine\Source\Runtime\Engine\Octree\OctreeOcclusionQuery.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Slate\Widgets\Layout\SSplitter.cpp" />
