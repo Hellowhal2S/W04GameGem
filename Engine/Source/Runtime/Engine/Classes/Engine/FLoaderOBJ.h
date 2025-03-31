@@ -490,22 +490,6 @@ struct EdgeCollapse {
 };
 
 
-// 병합 가능한지 여부를 결정하는 함수 (위치와 UV만 고려)
-// 임계값은 상황에 맞게 조정
-static bool CanMerge(const FVector& pos1, const FVector& pos2,
-                     const FVector2D& uv1, const FVector2D& uv2,
-                     float posThreshold = 10.f,
-                     float uvThreshold = 10.0f)
-{
-    if ((pos1 - pos2).Magnitude() > posThreshold)
-        return false;
-    
-    if (std::abs(uv1.x - uv2.x) > uvThreshold || std::abs(uv1.y - uv2.y) > uvThreshold)
-        return false;
-    
-    return true;
-}
-
 class QEMSimplifier {
 public:
     // targetVertexCount까지 단순화 (예제에서는 면 정보를 이용하여 인접 정점만 후보로 처리)
@@ -577,11 +561,7 @@ public:
         std::priority_queue<EdgeCollapse> collapseQueue;
         for (const auto& edge : edgeSet) {
             IndexSet minEdge = edge.first, maxEdge = edge.second;
-            if (!CanMerge(obj.Vertices[minEdge.verIndex], obj.Vertices[maxEdge.verIndex],
-                          obj.UVs[minEdge.texIndex], obj.UVs[maxEdge.texIndex]))
-            {
-                continue;
-            }
+
             FVector midpoint = (obj.Vertices[minEdge.verIndex] + obj.Vertices[maxEdge.verIndex]) * 0.5f;
             float cost = ComputeCollapseCost(quadrics[minEdge.verIndex], quadrics[maxEdge.verIndex], midpoint);
             collapseQueue.push({minEdge, maxEdge, cost, midpoint});
@@ -713,11 +693,6 @@ public:
             }
             for (const auto& edge : edgeSet) {
                 IndexSet minEdge = edge.first, maxEdge = edge.second;
-                if (!CanMerge(obj.Vertices[minEdge.verIndex], obj.Vertices[maxEdge.verIndex],
-                              obj.UVs[minEdge.texIndex], obj.UVs[maxEdge.texIndex]))
-                {
-                    continue;
-                }
                 FVector midpoint = (obj.Vertices[minEdge.verIndex] + obj.Vertices[maxEdge.verIndex]) * 0.5f;
                 float cost = ComputeCollapseCost(quadrics[minEdge.verIndex], quadrics[maxEdge.verIndex], midpoint);
                 collapseQueue.push({minEdge, maxEdge, cost, midpoint});
@@ -731,19 +706,52 @@ private:
     static float ComputeCollapseCost(const Quadric& q1, const Quadric& q2, FVector& newPos) {
         Quadric q = q1;
         q.Add(q2);
-
+    
         // 4D 벡터 확장: newPos = (x, y, z, 1)
         float x = newPos.x;
         float y = newPos.y;
         float z = newPos.z;
-
+    
         // newPos^T * Q * newPos 계산
         float cost =
             q.data[0] * x * x + 2.0f * q.data[1] * x * y + 2.0f * q.data[2] * x * z + 2.0f * q.data[3] * x +  
             q.data[4] * y * y + 2.0f * q.data[5] * y * z + 2.0f * q.data[6] * y +
             q.data[7] * z * z + 2.0f * q.data[8] * z +
             q.data[9];  // d*d 항
-
+    
         return cost;
+    }
+    static float ComputeCollapseCost(const Quadric& q1, const Quadric& q2, FVector& newPos, 
+                                   const FVector2D& uv1, const FVector2D& uv2, 
+                                   const FVector& normal1, const FVector& normal2) {
+        Quadric q = q1;
+        q.Add(q2);
+    
+        float x = newPos.x;
+        float y = newPos.y;
+        float z = newPos.z;
+    
+        // 기본 기하학적 비용 계산: newPos^T * Q * newPos
+        float geomCost =
+            q.data[0] * x * x + 2.0f * q.data[1] * x * y + 2.0f * q.data[2] * x * z + 2.0f * q.data[3] * x +
+            q.data[4] * y * y + 2.0f * q.data[5] * y * z + 2.0f * q.data[6] * y +
+            q.data[7] * z * z + 2.0f * q.data[8] * z +
+            q.data[9];
+    
+        // UV 차이에 따른 비용 (단순 예제: 두 UV 사이의 유클리드 거리의 제곱)
+        float du = uv1.x - uv2.x;
+        float dv = uv1.y - uv2.y;
+        float uvCost = du * du + dv * dv;
+    
+        // 노말 차이에 따른 비용 (두 노말의 코사인 유사도 기반, 1 - DotProduct)
+        float normalDiff = 1.0f - normal1.Dot(normal2);
+        float normalCost = normalDiff * normalDiff;
+    
+        // 가중치 인자: alpha와 beta는 조절 가능한 파라미터
+        const float alpha = .1f;  // UV 비용에 대한 가중치
+        const float beta = .1f;   // 노말 비용에 대한 가중치
+    
+        float totalCost = geomCost + alpha * uvCost + beta * normalCost;
+        return totalCost;
     }
 };
