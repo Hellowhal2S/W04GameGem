@@ -663,7 +663,7 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
             FVector midPoint = (Bounds.max + Bounds.min) *0.5f;
             FVector cameraLoc = GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->ViewTransformPerspective.GetLocation();
             float distance =  midPoint.Distance(cameraLoc);
-            if ( distance < 20.f)
+            if ( distance < GEngineLoop.firstLOD)
             {
                 for (auto& Pair : CachedBatchData)
                 {
@@ -671,7 +671,7 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
                     OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
                 }
             }
-            else if (distance < 50.0f)
+            else if (distance < GEngineLoop.firstLOD + GEngineLoop.SecondLOD)
             {
                 for (auto& Pair : CachedBatchDataX5)
                 {

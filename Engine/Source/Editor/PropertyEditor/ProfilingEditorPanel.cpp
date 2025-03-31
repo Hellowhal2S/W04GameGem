@@ -32,6 +32,12 @@ void ProfilingEditorPanel::Render()
         ImGui::Text("Picking Time %.4fms\nNum Attempts: %d\nAccumulated Time %.2fms",FStatRegistry::GetLastMilliseconds("Picking"),FStatRegistry::TotalPickCount,FStatRegistry::TotalPickTime);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
+
+        float& firstLOD = GEngineLoop.firstLOD;
+        float& secondLOD = GEngineLoop.SecondLOD;
+        
+        ImGui::SliderFloat("First LOD", &firstLOD, 1.0f, 100.0f, "%.1f");
+        ImGui::SliderFloat("Second LOD", &secondLOD, 1.0f, 100.0f, "%.1f");
         //ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
         //ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
         

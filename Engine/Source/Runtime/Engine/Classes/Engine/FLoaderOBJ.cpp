@@ -60,7 +60,7 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
 
     OBJ::FStaticMeshRenderData* DowngradeX5 = new OBJ::FStaticMeshRenderData();
     FObjInfo DowngradeX5Obj = NewObjInfo;
-    QEMSimplifier::Simplify(DowngradeX5Obj, DowngradeX5Obj.Vertices.Num() * 0.5);
+    QEMSimplifier::Simplify(DowngradeX5Obj, DowngradeX5Obj.Vertices.Num() * 0.35);
     DowngradeX5Obj.ObjectName = DowngradeX5Obj.ObjectName + L"X5";
 
     if (DowngradeX5Obj.MaterialSubsets.Num() > 0)
