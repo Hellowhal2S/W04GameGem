@@ -7,11 +7,13 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "KDTree/KDTree.h"
+#include "LevelEditor/SLevelEditor.h"
 #include "Math/Frustum.h"
 #include "Math/JungleMath.h"
 #include "Math/Ray.h"
 #include "Profiling/PlatformTime.h"
 #include "Profiling/StatRegistry.h"
+#include "UnrealEd/EditorViewportClient.h"
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/Casts.h"
 #include "UObject/UObjectIterator.h"
@@ -506,7 +508,9 @@ void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
             for (int LOD = (int)ELODLevel::LOD0; LOD <= (int)ELODLevel::LOD2; ++LOD)
             {
                 ELODLevel LODLevel = static_cast<ELODLevel>(LOD);
-                OBJ::FStaticMeshRenderData* RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData(LODLevel);
+                OBJ::FStaticMeshRenderData* RenderData = nullptr;
+                
+                RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData(LODLevel);
                 if (!RenderData) continue;
 
                 const auto& MeshVertices = RenderData->Vertices;
@@ -676,7 +680,7 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TArray<FOctreeNode
 }
 void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode, ELODLevel LODLevel)
 {
-    std::string str = RootNode->DumpLODRangeRecursive(3);
+    //std::string str = RootNode->DumpLODRangeRecursive(3);
     if (!RootNode) return;
 
     FMatrix MVP = FMatrix::Identity * VP;
@@ -685,10 +689,21 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray
 
     const TMap<FString, FRenderBatchRootData>& RootBatches = RootNode->CachedBatchRootData;
 
+    FVector cameraPos = GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->ViewTransformPerspective.GetLocation();
     // 머티리얼+LOD 단위로 묶기
     TMap<FString, TArray<const FOctreeNode*>> MaterialNodeMap;
     for (const FOctreeNode* Node : RenderNodes)
     {
+        FVector curPos = Node->Bounds.GetCenter();
+        float distance = cameraPos.Distance(curPos);
+        if (distance < GEngineLoop.firstLOD)
+            LODLevel = ELODLevel::LOD0;
+        else if ( distance < GEngineLoop.firstLOD + GEngineLoop.SecondLOD)
+            LODLevel = ELODLevel::LOD1;
+        else
+        {
+            LODLevel = ELODLevel::LOD2;
+        }
         for (const auto& Pair : Node->CachedBatchNodeData)
         {
             const FString& Key = Pair.Key; // Material_LODx
@@ -712,7 +727,16 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray
         const FRenderBatchRootData* RootBatch = RootBatches.Find(Key);
         if (!RootBatch)
             continue;
-
+        for (const FOctreeNode* Node : Nodes)
+        {
+            FVector curPos = Node->Bounds.GetCenter();
+            float distance = cameraPos.Distance(curPos);
+            if (distance < GEngineLoop.firstLOD)
+                LODLevel = ELODLevel::LOD0;
+            else if (distance < GEngineLoop.firstLOD + GEngineLoop.SecondLOD)
+                LODLevel = ELODLevel::LOD1;
+            else
+                LODLevel = ELODLevel::LOD2;
         ID3D11Buffer* VB = RootBatch->VertexBuffers[LODLevel];
         ID3D11Buffer* IB = RootBatch->IndexBuffers[LODLevel];
         if (!VB || !IB) continue;
@@ -728,8 +752,7 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray
         Renderer.Graphics->DeviceContext->IASetIndexBuffer(IB, DXGI_FORMAT_R32_UINT, 0);
 
         // Draw
-        for (const FOctreeNode* Node : Nodes)
-        {
+        
             const FRenderBatchNodeData* NodeBatch = Node->CachedBatchNodeData.Find(Key);
             if (!NodeBatch) continue;
 
