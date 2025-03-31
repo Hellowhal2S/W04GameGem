@@ -45,6 +45,8 @@ public:
     int NodeId = 0;
 
     TMap<FString, FRenderBatchData> CachedBatchData;
+    TMap<FString, FRenderBatchData> CachedBatchDataX5;
+    TMap<FString, FRenderBatchData> CachedBatchDataX1;
     FKDTreeNode* KDTree = nullptr;
     
     FOctreeNode(const FBoundingBox& InBounds, int InDepth);
