@@ -47,7 +47,7 @@ private:
     FSceneMgr* SceneMgr;
     
     bool bIsExit = false;
-    const int32 targetFPS = 240;
+    const int32 targetFPS = 1000;
     bool bTestInput = false;
 
 public:

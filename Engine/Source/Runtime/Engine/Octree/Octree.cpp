@@ -662,8 +662,11 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
     if (Containment == EFrustumContainment::Contains ||
         (Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax))
     {
+        //UE_LOG(LogLevel::Display, "CollectRenderNodes! %d", NodeId);
         if (!GOcclusionSystem->IsRegionVisible(NodeId))
         {
+            //UE_LOG(LogLevel::Display, "Occlusion Cull %d", NodeId);
+            //UE_LOG(LogLevel::Display, "Depth Level %d", Depth);
             return;
         }
 
@@ -773,6 +776,9 @@ void FOctreeNode::QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Conte
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
     if (Containment == EFrustumContainment::Contains || Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax)
     {
+        if (Depth > GRenderDepthMax)
+            return;
+
         if (NodeId == 0)
             NodeId = MakeNodeId(Bounds);
 

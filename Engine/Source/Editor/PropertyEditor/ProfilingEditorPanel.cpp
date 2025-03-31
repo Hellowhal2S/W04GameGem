@@ -39,6 +39,7 @@ void ProfilingEditorPanel::Render()
         //if (ImGui::Checkbox("UseKD",&GEngineLoop.GetWorld()->SceneOctree->bUseKD));
         if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
         if (ImGui::Checkbox("Debug OctreeAABB",&FEngineLoop::renderer.bDebugOctreeAABB));
+        if (ImGui::Checkbox("Occlusion Culling", &FEngineLoop::renderer.bOcclusionCulling));
         if (ImGui::Button("Clear Cache"))
         {
             GEngineLoop.GetWorld()->SceneOctree->GetRoot()->ClearBatchDatas();

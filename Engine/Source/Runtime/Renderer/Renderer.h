@@ -173,6 +173,8 @@ public: // line shader
     mutable bool bMaterialDirty = true;
     bool bMaterialSort = true;
     bool bDebugOctreeAABB=false;
+    bool bOcclusionCulling = false;
+
 private:
     TArray<UStaticMeshComponent*> StaticMeshObjs;
     TArray<UGizmoBaseComponent*> GizmoObjs;

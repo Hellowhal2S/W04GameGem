@@ -20,7 +20,6 @@ OcclusionQuerySystem::~OcclusionQuerySystem()
 void OcclusionQuerySystem::BeginFrame()
 {
     QueriesThisFrame = 0;
-    m_currentFrame++;
 }
 
 void OcclusionQuerySystem::QueryRegion(
@@ -40,18 +39,28 @@ void OcclusionQuerySystem::QueryRegion(
 
     if ((m_currentFrame - region.LastQueryFrame) >= kQueryInterval)
     {
-        context->Begin(region.Query);
-        DrawFunc(bounds);
-        context->End(region.Query);
-
-        region.LastQueryFrame = m_currentFrame;
+        if (id % 4 == m_currentFrame % 4)
+        {
+            context->Begin(region.Query);
+            DrawFunc(bounds);
+            context->End(region.Query);
+            region.LastQueryFrame = m_currentFrame;
+        }
+        //context->Begin(region.Query);
+        //DrawFunc(bounds);
+        //context->End(region.Query);
+        //region.LastQueryFrame = m_currentFrame;
     }
 }
 
 void OcclusionQuerySystem::EndFrame(ID3D11DeviceContext* context)
 {
-    for (auto& [_, region] : m_regions)
+    const int QueryGroupMod = 4;
+
+    for (auto& [id, region] : m_regions)
     {
+        if ((id % QueryGroupMod) != (m_currentFrame % QueryGroupMod)) continue;
+
         if (!region.Query) continue;
 
         UINT64 samples = 0;
@@ -67,6 +76,8 @@ void OcclusionQuerySystem::EndFrame(ID3D11DeviceContext* context)
             region.LastValidFrame = m_currentFrame;
         }
     }
+
+    m_currentFrame++;
 }
 
 
@@ -75,14 +86,22 @@ bool OcclusionQuerySystem::IsRegionVisible(int id) const
 {
     auto it = m_regions.find(id);
     if (it == m_regions.end())
+    {
+        //UE_LOG(LogLevel::Display, "First Time %d", id);
         return true; // 처음 보는 박스는 보이는 것으로 간주
+    }
+
 
     const RegionData& region = it->second;
     if (((m_currentFrame - region.LastValidFrame) > kFallbackMaxAge))
     {
+        //UE_LOG(LogLevel::Display, "Old Frame %d", id);
+        //UE_LOG(LogLevel::Display, "Old Frame CurrentFrame %d", m_currentFrame);
+        //UE_LOG(LogLevel::Display, "Old Frame LastValidFrame %d", region.LastValidFrame);
         return true; // 오래된 프레임은 보이는 것으로 간주
     }
 
+    //UE_LOG(LogLevel::Display, "Visible %s", region.Visible ? "true" : "false");
 
     return region.Visible;
 }
