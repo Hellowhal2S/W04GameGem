@@ -20,18 +20,21 @@
 
 struct FVertexSimple
 {
-    float x, y, z;    // Position
+    float x, y, z; // Position
     float r, g, b, a; // Color
     float nx, ny, nz;
-    float u=0, v=0;
+    float u = 0, v = 0;
     uint32 MaterialIndex;
 };
+
 // 압축된 Vertex 구조체 정의 (사과 렌더링 최적화 전용)
 struct FVertexCompact
 {
-    float x, y, z;               // 12 bytes
-    uint16 u, v;                 // 4 bytes (압축된 UV, 0~65535)
+    float x, y, z; // 12 bytes
+    uint16 u, v; // 4 bytes (압축된 UV, 0~65535)
+    inline FVector ToFVector() const;
 };
+
 static_assert(sizeof(FVertexCompact) == 16);
 
 inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
@@ -49,15 +52,16 @@ inline FVertexCompact ConvertToCompact(const FVertexSimple& Src)
     v = v * 0.5f + 0.5f;
 
     // 또는 만약 원래 0~1인데 Y축만 뒤집고 싶다면:
-    // v = 1.0f - v;
-
     Dst.u = static_cast<uint16>(FMath::Clamp(u, 0.0f, 1.0f) * 65535.0f + 0.5f);
     Dst.v = static_cast<uint16>(FMath::Clamp(v, 0.0f, 1.0f) * 65535.0f + 0.5f);
-    // UV: [0, 1] → [0, 65535]
-    //Dst.u = static_cast<uint16>(FMath::Clamp(Src.u, 0.0f, 1.0f) * 65535.0f);
-    //Dst.v = static_cast<uint16>(FMath::Clamp(Src.v, 0.0f, 1.0f) * 65535.0f);
+
 
     return Dst;
+}
+
+inline FVector FVertexCompact::ToFVector() const
+{
+    return FVector{x, y, z};
 }
 
 // Material Subset
@@ -83,16 +87,16 @@ struct FObjInfo
     FWString PathName; // OBJ File Paths
     FString DisplayName; // Display Name
     FString MatName; // OBJ MTL File Name
-    
+
     // Group
     uint32 NumOfGroup = 0; // token 'g' or 'o'
     TArray<FString> GroupName;
-    
+
     // Vertex, UV, Normal List
     TArray<FVector> Vertices;
     TArray<FVector> Normals;
     TArray<FVector2D> UVs;
-    
+
     // Faces
     TArray<int32> Faces;
 
@@ -100,76 +104,77 @@ struct FObjInfo
     TArray<uint32> VertexIndices;
     TArray<uint32> NormalIndices;
     TArray<uint32> TextureIndices;
-    
+
     // Material
     TArray<FMaterialSubset> MaterialSubsets;
 };
 
 struct FObjMaterialInfo
 {
-    FString MTLName;  // newmtl : Material Name.
+    FString MTLName; // newmtl : Material Name.
 
-    bool bHasTexture = false;  // Has Texture?
+    bool bHasTexture = false; // Has Texture?
     bool bTransparent = false; // Has alpha channel?
 
-    FVector Diffuse;  // Kd : Diffuse (Vector4)
-    FVector Specular;  // Ks : Specular (Vector) 
-    FVector Ambient;   // Ka : Ambient (Vector)
-    FVector Emissive;  // Ke : Emissive (Vector)
+    FVector Diffuse; // Kd : Diffuse (Vector4)
+    FVector Specular; // Ks : Specular (Vector) 
+    FVector Ambient; // Ka : Ambient (Vector)
+    FVector Emissive; // Ke : Emissive (Vector)
 
     float SpecularScalar; // Ns : Specular Power (Float)
-    float DensityScalar;  // Ni : Optical Density (Float)
+    float DensityScalar; // Ni : Optical Density (Float)
     float TransparencyScalar; // d or Tr  : Transparency of surface (Float)
 
     uint32 IlluminanceModel; // illum: illumination Model between 0 and 10. (UINT)
 
     /* Texture */
-    FString DiffuseTextureName;  // map_Kd : Diffuse texture
+    FString DiffuseTextureName; // map_Kd : Diffuse texture
     FWString DiffuseTexturePath;
-    
-    FString AmbientTextureName;  // map_Ka : Ambient texture
+
+    FString AmbientTextureName; // map_Ka : Ambient texture
     FWString AmbientTexturePath;
-    
+
     FString SpecularTextureName; // map_Ks : Specular texture
     FWString SpecularTexturePath;
-    
-    FString BumpTextureName;     // map_Bump : Bump texture
+
+    FString BumpTextureName; // map_Bump : Bump texture
     FWString BumpTexturePath;
-    
-    FString AlphaTextureName;    // map_d : Alpha texture
+
+    FString AlphaTextureName; // map_d : Alpha texture
     FWString AlphaTexturePath;
 };
+
 inline bool operator==(const FObjMaterialInfo& A, const FObjMaterialInfo& B)
 {
     return A.MTLName == B.MTLName &&
-           A.bHasTexture == B.bHasTexture &&
-           A.bTransparent == B.bTransparent &&
+        A.bHasTexture == B.bHasTexture &&
+        A.bTransparent == B.bTransparent &&
 
-           A.Diffuse == B.Diffuse &&
-           A.Specular == B.Specular &&
-           A.Ambient == B.Ambient &&
-           A.Emissive == B.Emissive &&
+        A.Diffuse == B.Diffuse &&
+        A.Specular == B.Specular &&
+        A.Ambient == B.Ambient &&
+        A.Emissive == B.Emissive &&
 
-           FMath::IsNearlyEqual(A.SpecularScalar, B.SpecularScalar) &&
-           FMath::IsNearlyEqual(A.DensityScalar, B.DensityScalar) &&
-           FMath::IsNearlyEqual(A.TransparencyScalar, B.TransparencyScalar) &&
+        FMath::IsNearlyEqual(A.SpecularScalar, B.SpecularScalar) &&
+        FMath::IsNearlyEqual(A.DensityScalar, B.DensityScalar) &&
+        FMath::IsNearlyEqual(A.TransparencyScalar, B.TransparencyScalar) &&
 
-           A.IlluminanceModel == B.IlluminanceModel &&
+        A.IlluminanceModel == B.IlluminanceModel &&
 
-           A.DiffuseTextureName == B.DiffuseTextureName &&
-           A.DiffuseTexturePath == B.DiffuseTexturePath &&
+        A.DiffuseTextureName == B.DiffuseTextureName &&
+        A.DiffuseTexturePath == B.DiffuseTexturePath &&
 
-           A.AmbientTextureName == B.AmbientTextureName &&
-           A.AmbientTexturePath == B.AmbientTexturePath &&
+        A.AmbientTextureName == B.AmbientTextureName &&
+        A.AmbientTexturePath == B.AmbientTexturePath &&
 
-           A.SpecularTextureName == B.SpecularTextureName &&
-           A.SpecularTexturePath == B.SpecularTexturePath &&
+        A.SpecularTextureName == B.SpecularTextureName &&
+        A.SpecularTexturePath == B.SpecularTexturePath &&
 
-           A.BumpTextureName == B.BumpTextureName &&
-           A.BumpTexturePath == B.BumpTexturePath &&
+        A.BumpTextureName == B.BumpTextureName &&
+        A.BumpTexturePath == B.BumpTexturePath &&
 
-           A.AlphaTextureName == B.AlphaTextureName &&
-           A.AlphaTexturePath == B.AlphaTexturePath;
+        A.AlphaTextureName == B.AlphaTextureName &&
+        A.AlphaTexturePath == B.AlphaTexturePath;
 }
 
 // Cooked Data
@@ -180,13 +185,13 @@ namespace OBJ
         FWString ObjectName;
         FWString PathName;
         FString DisplayName;
-        
+
         TArray<FVertexCompact> Vertices;
         TArray<UINT> Indices;
 
         ID3D11Buffer* VertexBuffer;
         ID3D11Buffer* IndexBuffer;
-        
+
         TArray<FObjMaterialInfo> Materials;
         TArray<FMaterialSubset> MaterialSubsets;
 
@@ -197,47 +202,118 @@ namespace OBJ
 
 struct FVertexTexture
 {
-	float x, y, z;    // Position
-	float u, v; // Texture
+    float x, y, z; // Position
+    float u, v; // Texture
 };
+
 struct FGridParameters
 {
-	float gridSpacing;
-	int   numGridLines;
-	FVector gridOrigin;
-	float pad;
+    float gridSpacing;
+    int numGridLines;
+    FVector gridOrigin;
+    float pad;
 };
+
 struct FSimpleVertex
 {
-	float dummy; // 내용은 사용되지 않음
+    float dummy; // 내용은 사용되지 않음
     float padding[11];
 };
-struct FOBB {
+
+struct FOBB
+{
     FVector corners[8];
 };
+
 struct FRect
 {
-    FRect() : leftTopX(0), leftTopY(0), width(0), height(0) {}
-    FRect(float x, float y, float w, float h) : leftTopX(x), leftTopY(y), width(w), height(h) {}
+    FRect()
+        : leftTopX(0)
+        , leftTopY(0)
+        , width(0)
+        , height(0)
+    {
+    }
+
+    FRect(float x, float y, float w, float h)
+        : leftTopX(x)
+        , leftTopY(y)
+        , width(w)
+        , height(h)
+    {
+    }
+
     float leftTopX, leftTopY, width, height;
 };
+
+struct FSphere
+{
+    FVector Center;
+    float Radius;
+
+    FSphere()
+        : Center(FVector::ZeroVector)
+        , Radius(0.0f)
+    {
+    }
+
+    FSphere(const FVector& InCenter, float InRadius)
+        : Center(InCenter)
+        , Radius(InRadius)
+    {
+    }
+    bool Overlaps(const FSphere& Sphere) const
+    {
+        return (Center-Sphere.Center).Magnitude()<Radius+Sphere.Radius;
+    }
+};
+
 struct FPoint
 {
-    FPoint() : x(0), y(0) {}
-    FPoint(float _x, float _y) : x(_x), y(_y) {}
-    FPoint(long _x, long _y) : x(_x), y(_y) {}
-    FPoint(int _x, int _y) : x(_x), y(_y) {}
+    FPoint()
+        : x(0)
+        , y(0)
+    {
+    }
+
+    FPoint(float _x, float _y)
+        : x(_x)
+        , y(_y)
+    {
+    }
+
+    FPoint(long _x, long _y)
+        : x(_x)
+        , y(_y)
+    {
+    }
+
+    FPoint(int _x, int _y)
+        : x(_x)
+        , y(_y)
+    {
+    }
 
     float x, y;
 };
+
 struct FBoundingBox
 {
-    FBoundingBox(){}
-    FBoundingBox(FVector _min, FVector _max) : min(_min), max(_max) {}
-	FVector min; // Minimum extents
-	float pad;
-	FVector max; // Maximum extents
-	float pad1;
+    FBoundingBox()
+    {
+    }
+
+    FBoundingBox(FVector _min, FVector _max)
+        : min(_min)
+        , max(_max)
+    {
+    }
+
+    FVector min; // Minimum extents
+    float pad;
+    FVector max; // Maximum extents
+    float pad1;
+
     bool Intersect(const FVector& rayOrigin, const FVector& rayDir, float& outDistance)
     {
         float tmin = -FLT_MAX;
@@ -256,7 +332,7 @@ struct FBoundingBox
         {
             float t1 = (min.x - rayOrigin.x) / rayDir.x;
             float t2 = (max.x - rayOrigin.x) / rayDir.x;
-            if (t1 > t2)  std::swap(t1, t2);
+            if (t1 > t2) std::swap(t1, t2);
 
             // tmin은 "현재까지의 교차 구간 중 가장 큰 min"
             tmin = (t1 > tmin) ? t1 : tmin;
@@ -276,7 +352,7 @@ struct FBoundingBox
         {
             float t1 = (min.y - rayOrigin.y) / rayDir.y;
             float t2 = (max.y - rayOrigin.y) / rayDir.y;
-            if (t1 > t2)  std::swap(t1, t2);
+            if (t1 > t2) std::swap(t1, t2);
 
             tmin = (t1 > tmin) ? t1 : tmin;
             tmax = (t2 < tmax) ? t2 : tmax;
@@ -294,7 +370,7 @@ struct FBoundingBox
         {
             float t1 = (min.z - rayOrigin.z) / rayDir.z;
             float t2 = (max.z - rayOrigin.z) / rayDir.z;
-            if (t1 > t2)  std::swap(t1, t2);
+            if (t1 > t2) std::swap(t1, t2);
 
             tmin = (t1 > tmin) ? t1 : tmin;
             tmax = (t2 < tmax) ? t2 : tmax;
@@ -322,17 +398,37 @@ struct FBoundingBox
             min.y <= Other.min.y && max.y >= Other.max.y &&
             min.z <= Other.min.z && max.z >= Other.max.z;
     }
+
     //일부라도 겹칠 경우
     bool Overlaps(const FBoundingBox& Other) const
     {
         return !(Other.min.x > max.x || Other.max.x < min.x ||
-                 Other.min.y > max.y || Other.max.y < min.y ||
-                 Other.min.z > max.z || Other.max.z < min.z);
+            Other.min.y > max.y || Other.max.y < min.y ||
+            Other.min.z > max.z || Other.max.z < min.z);
     }
+
+    bool Overlaps(const FSphere& Sphere) const
+    {
+        float dmin = 0.0f;
+        for (int i = 0; i < 3; i++)
+        {
+            float c = Sphere.Center[i];
+            if (c < min[i]) dmin += (c - min[i]) * (c - min[i]);
+            else if (c > max[i]) dmin += (c - max[i]) * (c - max[i]);
+        }
+        return dmin <= (Sphere.Radius * Sphere.Radius);
+    }
+
     FVector GetCenter() const
     {
         return (min + max) * 0.5f;
     }
+
+    FVector GetExtents() const
+    {
+        return (max - min) * 0.5f;
+    }
+
     // 단일 좌표가 박스 내에 있는지 검사
     bool Contains(const FVector& Point) const
     {
@@ -342,7 +438,33 @@ struct FBoundingBox
             Point.z >= min.z && Point.z <= max.z;
     }
 
+    static FBoundingBox Union(const FBoundingBox& A, const FBoundingBox& B)
+    {
+        FVector Min = {
+            FMath::Min(A.min.x, B.min.x),
+            FMath::Min(A.min.y, B.min.y),
+            FMath::Min(A.min.z, B.min.z)
+        };
+        FVector Max = {
+            FMath::Max(A.max.x, B.max.x),
+            FMath::Max(A.max.y, B.max.y),
+            FMath::Max(A.max.z, B.max.z)
+        };
+        return FBoundingBox(Min, Max);
+    }
+    inline FSphere GetBoundingSphere(bool bUseMaxExtent = true) const
+    {
+        FVector Center = (min + max) * 0.5f;
+        FVector Extent = max - Center;
+
+        float Radius = bUseMaxExtent 
+            ? Extent.Magnitude()                      // 가장 먼 꼭짓점까지의 거리
+            : FMath::Min(FMath::Min(Extent.x, Extent.y), Extent.z); // 가장 짧은 반축을 반지름으로
+
+        return FSphere(Center, Radius);
+    }
 };
+
 struct FCone
 {
     FVector ConeApex; // 원뿔의 꼭짓점
@@ -354,28 +476,30 @@ struct FCone
 
     int ConeSegmentCount; // 원뿔 밑면 분할 수
     float pad[3];
+};
 
-};
-struct FPrimitiveCounts 
+struct FPrimitiveCounts
 {
-	int BoundingBoxCount;
-	int pad;
-	int ConeCount; 
-	int pad1;
+    int BoundingBoxCount;
+    int pad;
+    int ConeCount;
+    int pad1;
 };
+
 struct FLighting
 {
-	float lightDirX, lightDirY, lightDirZ; // 조명 방향
-	float pad1;                      // 16바이트 정렬용 패딩
-	float lightColorX, lightColorY, lightColorZ;    // 조명 색상
-	float pad2;                      // 16바이트 정렬용 패딩
-	float AmbientFactor;             // ambient 계수
-	float pad3; // 16바이트 정렬 맞춤 추가 패딩
-	float pad4; // 16바이트 정렬 맞춤 추가 패딩
-	float pad5; // 16바이트 정렬 맞춤 추가 패딩
+    float lightDirX, lightDirY, lightDirZ; // 조명 방향
+    float pad1; // 16바이트 정렬용 패딩
+    float lightColorX, lightColorY, lightColorZ; // 조명 색상
+    float pad2; // 16바이트 정렬용 패딩
+    float AmbientFactor; // ambient 계수
+    float pad3; // 16바이트 정렬 맞춤 추가 패딩
+    float pad4; // 16바이트 정렬 맞춤 추가 패딩
+    float pad5; // 16바이트 정렬 맞춤 추가 패딩
 };
 
-struct FMaterialConstants {
+struct FMaterialConstants
+{
     FVector DiffuseColor;
     float TransparencyScalar;
     FVector AmbientColor;
@@ -386,24 +510,29 @@ struct FMaterialConstants {
     float MaterialPad0;
 };
 
-struct FConstants {
-    FMatrix MVP;      // 모델
+struct FConstants
+{
+    FMatrix MVP; // 모델
     FMatrix ModelMatrixInverseTranspose; // normal 변환을 위한 행렬
     FVector4 UUIDColor;
     bool IsSelected;
     FVector pad;
 };
-struct FLitUnlitConstants {
+
+struct FLitUnlitConstants
+{
     int isLit; // 1 = Lit, 0 = Unlit 
     FVector pad;
 };
 
-struct FSubMeshConstants {
+struct FSubMeshConstants
+{
     float isSelectedSubMesh;
     FVector pad;
 };
 
-struct FTextureConstants {
+struct FTextureConstants
+{
     float UOffset;
     float VOffset;
     float pad0;

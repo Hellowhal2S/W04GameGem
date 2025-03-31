@@ -484,6 +484,7 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Octree\OcclusionQuerySystem.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\Ray.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Octree\Octree.h" />
     <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\NameTypes.h" />
     <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectArray.h" />

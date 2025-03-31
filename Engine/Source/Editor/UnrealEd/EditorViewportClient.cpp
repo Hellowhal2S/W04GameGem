@@ -239,6 +239,29 @@ void FEditorViewportClient::PivotMoveUp(float _Value)
 {
     Pivot = Pivot + ViewTransformOrthographic.GetUpVector() * _Value * 0.05f;
 }
+FVector FEditorViewportClient::GetCameraWorldPosition() const
+{
+    if (IsOrtho())
+    {
+        // 오쏘는 뷰 행렬의 역행렬로 위치 계산
+        return ViewTransformOrthographic.GetLocation();
+    }
+    else
+    {
+        return ViewTransformPerspective.GetLocation();
+    }
+}
+FVector FEditorViewportClient::GetCameraForward()
+{
+    if (IsOrtho())
+    {
+        return ViewTransformOrthographic.GetForwardVector();
+    }
+    else
+    {
+        return ViewTransformPerspective.GetForwardVector();
+    }
+}
 
 void FEditorViewportClient::UpdateViewMatrix()
 {

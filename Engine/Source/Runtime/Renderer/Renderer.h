@@ -172,6 +172,7 @@ public: // line shader
     mutable std::wstring CachedTexturePath;
     mutable bool bMaterialDirty = true;
     bool bMaterialSort = true;
+    bool bDebugOctreeAABB=false;
 private:
     TArray<UStaticMeshComponent*> StaticMeshObjs;
     TArray<UGizmoBaseComponent*> GizmoObjs;

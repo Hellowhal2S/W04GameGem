@@ -4,6 +4,8 @@
 #include "UObject/ObjectFactory.h"
 #include "UObject/ObjectMacros.h"
 
+class FKDTreeSystem;
+class FKDTree;
 class FFrustum;
 class FOctree;
 class FObjectFactory;
@@ -61,7 +63,8 @@ public:
     UObject* worldGizmo = nullptr;
 
     FOctree* SceneOctree;
-    
+    FKDTreeSystem* SceneKDTreeSystem;
+    //FKDTree* SceneKDTree = nullptr;
     void BuildOctree();
     void ClearOctree();
     void DebugDrawFrustum(const FFrustum& Frustum);
@@ -84,7 +87,12 @@ public:
     USceneComponent* GetPickingGizmo() const { return pickingGizmo; }
     void SetPickingGizmo(UObject* Object);
 
+    void SetHighlightedComponent(UStaticMeshComponent* OriginalMeshComp);
+    void RenderHighlightedComponent(FRenderer& Renderer, const FMatrix& VP);
+
+    UStaticMeshComponent* HighlightedMeshComp;
     void ClearScene();
+    void ReloadScene(const FString& FileName);
 };
 
 
