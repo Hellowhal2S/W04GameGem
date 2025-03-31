@@ -104,7 +104,6 @@ struct FMatrix
     FVector4 Col2() const { return FVector4(M[0][1], M[1][1], M[2][1], M[3][1]); }
     FVector4 Col3() const { return FVector4(M[0][2], M[1][2], M[2][2], M[3][2]); }
     FVector4 Col4() const { return FVector4(M[0][3], M[1][3], M[2][3], M[3][3]); }
-};
 
     FVector GetColumn(int columnIndex) const
 	{

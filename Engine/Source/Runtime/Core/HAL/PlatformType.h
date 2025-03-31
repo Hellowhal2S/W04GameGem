@@ -31,7 +31,7 @@
 #endif
 
 // ON/OFF SIMD
-#define USE_SIMD 0
+#define USE_SIMD 1
 
 
 // unsigned int type
