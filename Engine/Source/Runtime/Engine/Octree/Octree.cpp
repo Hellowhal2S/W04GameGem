@@ -17,6 +17,45 @@
 #include "UObject/UObjectIterator.h"
 int GCurrentFrame = 0;
 
+void FOctree::BuildFull()
+{
+    FScopeCycleCounter Timer("BuildFullOctree");
+
+    FVector MinBound(FLT_MAX, FLT_MAX, FLT_MAX);
+    FVector MaxBound(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+    // Step 1. 전체 Bounds 계산
+    for (const auto* SceneComp : TObjectRange<USceneComponent>())
+    {
+        if (const auto* MeshComp = Cast<UMeshComponent>(SceneComp))
+        {
+            auto* PrimComp = Cast<UPrimitiveComponent>(MeshComp);
+            PrimComp->UpdateWorldAABB();
+            const FBoundingBox& AABB = MeshComp->WorldAABB;
+
+            MinBound = FVector::Min(MinBound, AABB.min);
+            MaxBound = FVector::Max(MaxBound, AABB.max);
+        }
+    }
+
+    delete Root;
+    Root = new FOctreeNode(FBoundingBox(MinBound, MaxBound), 0);
+
+    // Step 2. 노드 삽입
+    Build();
+
+    // Step 3. KDTree 및 렌더링 데이터 구축
+    Root->BuildKDTreeRecursive();
+    Root->BuildBatchRenderData();
+    Root->AssignAllDrawRanges();
+    Root->BuildBatchBuffers(FEngineLoop::renderer);
+    //Root->BuildBatchBuffers(FEngineLoop::renderer);
+    //Root->ClearBatchDatas();
+    //Root->ClearKDDatas(MaxDepthKD);
+
+    FStatRegistry::RegisterResult(Timer);
+}
+
 void FRenderBatchData::CreateBuffersIfNeeded(FRenderer& Renderer)
 {
     if (!VertexBuffer && !Vertices.IsEmpty())
@@ -96,6 +135,8 @@ void FOctreeNode::Insert(UPrimitiveComponent* Component, int MaxDepth)
 
             // 정확히 잘린 조각이므로 보정(Epsilon)은 오히려 왜곡을 일으킬 수 있음
             Children[i] = new FOctreeNode(FBoundingBox(Min, Max), Depth + 1);
+            Children[i]->Parent = this;
+            Children[i]->ChildIndex = i;
         }
         bIsLeaf = false;
 
@@ -123,7 +164,7 @@ void FOctreeNode::BuildOverlappingRecursive(UPrimitiveComponent* Component)
 {
     if (!Bounds.Overlaps(Component->WorldAABB))
         return;
-    
+
     OverlappingComponents.Add(Component);
     for (int i = 0; i < 8; ++i)
     {
@@ -166,42 +207,6 @@ FOctree::~FOctree()
 {
     delete Root;
 }
-void FOctree::BuildFull()
-{
-    FScopeCycleCounter Timer("BuildFullOctree");
-
-    FVector MinBound(FLT_MAX, FLT_MAX, FLT_MAX);
-    FVector MaxBound(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-    // Step 1. 전체 Bounds 계산
-    for (const auto* SceneComp : TObjectRange<USceneComponent>())
-    {
-        if (const auto* MeshComp = Cast<UMeshComponent>(SceneComp))
-        {
-            auto* PrimComp = Cast<UPrimitiveComponent>(MeshComp);
-            PrimComp->UpdateWorldAABB();
-            const FBoundingBox& AABB = MeshComp->WorldAABB;
-
-            MinBound = FVector::Min(MinBound, AABB.min);
-            MaxBound = FVector::Max(MaxBound, AABB.max);
-        }
-    }
-
-    delete Root;
-    Root = new FOctreeNode(FBoundingBox(MinBound, MaxBound), 0);
-
-    // Step 2. 노드 삽입
-    Build();
-
-    // Step 3. KDTree 및 렌더링 데이터 구축
-    Root->BuildKDTreeRecursive();
-    Root->BuildBatchRenderData();
-    Root->BuildBatchBuffers(FEngineLoop::renderer);
-    Root->ClearBatchDatas();
-    Root->ClearKDDatas(MaxDepthKD);
-
-    FStatRegistry::RegisterResult(Timer);
-}
 
 void FOctree::Build()
 {
@@ -219,7 +224,7 @@ void FOctree::Build()
 UPrimitiveComponent* FOctree::Raycast(const FRay& Ray, float& OutHitDistance) const
 {
     if (!Root) return nullptr;
-    if (bUseKD) return Root->RaycastWithKD(Ray, OutHitDistance,MaxDepthKD);
+    if (bUseKD) return Root->RaycastWithKD(Ray, OutHitDistance, MaxDepthKD);
     else return Root->Raycast(Ray, OutHitDistance);
 }
 
@@ -308,8 +313,8 @@ UPrimitiveComponent* FOctreeNode::RaycastWithKD(const FRay& Ray, float& OutDista
         if (Children[i])
         {
             const FVector Center = Children[i]->Bounds.GetCenter();
-            float Dist = (Center - Ray.Origin).Magnitude();  // 또는 Dot으로 방향성 포함
-            SortedChildren.Add({ Children[i], Dist });
+            float Dist = (Center - Ray.Origin).Magnitude(); // 또는 Dot으로 방향성 포함
+            SortedChildren.Add({Children[i], Dist});
         }
     }
 
@@ -359,21 +364,21 @@ void FOctreeNode::BuildBatchRenderData()
         if (Children[i])
         {
             Children[i]->BuildBatchRenderData();
-            if (Depth >= GRenderDepthMin)
-                for (const auto& Pair : Children[i]->CachedBatchData)
-                {
-                    const FString& MaterialName = Pair.Key;
-                    const FRenderBatchData& ChildData = Pair.Value;
+            //if (Depth >= GRenderDepthMin)
+            for (const auto& Pair : Children[i]->CachedBatchData)
+            {
+                const FString& MaterialName = Pair.Key;
+                const FRenderBatchData& ChildData = Pair.Value;
 
-                    FRenderBatchData& CurrentData = CachedBatchData.FindOrAdd(MaterialName);
-                    CurrentData.MaterialInfo = ChildData.MaterialInfo;
+                FRenderBatchData& CurrentData = CachedBatchData.FindOrAdd(MaterialName);
+                CurrentData.MaterialInfo = ChildData.MaterialInfo;
+                CurrentData.OwnerNode = this;
+                UINT VertexOffset = (UINT)CurrentData.Vertices.Num();
+                CurrentData.Vertices.Append(ChildData.Vertices);
 
-                    UINT VertexOffset = (UINT)CurrentData.Vertices.Num();
-                    CurrentData.Vertices.Append(ChildData.Vertices);
-
-                    for (UINT Index : ChildData.Indices)
-                        CurrentData.Indices.Add(Index + VertexOffset);
-                }
+                for (UINT Index : ChildData.Indices)
+                    CurrentData.Indices.Add(Index + VertexOffset);
+            }
         }
     }
     // Step 2. 본인 노드의 Components 처리
@@ -402,7 +407,6 @@ void FOctreeNode::BuildBatchRenderData()
 
             FRenderBatchData& Entry = CachedBatchData.FindOrAdd(MatInfo.MTLName);
             Entry.MaterialInfo = MatInfo;
-
             UINT VertexStart = (UINT)Entry.Vertices.Num();
             TMap<UINT, UINT> IndexMap;
 
@@ -440,6 +444,28 @@ void FOctreeNode::BuildBatchRenderData()
 void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
 {
     FScopeCycleCounter Timer("BuildBatchBuffers");
+    if (Depth == 0)
+    {
+        for (auto& Pair : CachedBatchData)
+        {
+            FRenderBatchData& RenderData = Pair.Value;
+
+            if (!RenderData.Vertices.IsEmpty())
+            {
+                RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
+                    RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
+            }
+
+            if (!RenderData.Indices.IsEmpty())
+            {
+                RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
+                    RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
+            }
+
+            RenderData.IndicesNum = RenderData.Indices.Num();
+        }
+    }
+    /*
     if (Depth >= GRenderDepthMin && Depth <= GRenderDepthMax)
     {
         for (auto& Pair : CachedBatchData)
@@ -465,7 +491,7 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
     {
         if (Children[i])
             Children[i]->BuildBatchBuffers(Renderer);
-    }
+    }*/
     FStatRegistry::RegisterResult(Timer);
 }
 
@@ -486,12 +512,13 @@ void FOctreeNode::ClearBatchDatas()
             Children[i]->ClearBatchDatas();
     }
 }
+
 void FOctreeNode::ClearKDDatas(int MaxDepthKD)
 {
-    if (Depth!=MaxDepthKD)
+    if (Depth != MaxDepthKD)
     {
         delete KDTree;
-        KDTree=nullptr;
+        KDTree = nullptr;
         OverlappingComponents.Empty();
         OverlappingComponents.ShrinkToFit();
     }
@@ -503,6 +530,7 @@ void FOctreeNode::ClearKDDatas(int MaxDepthKD)
             Children[i]->ClearKDDatas(MaxDepthKD);
     }
 }
+
 void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
@@ -514,7 +542,9 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
             for (auto& Pair : CachedBatchData)
             {
                 const FString& MatName = Pair.Key;
-                OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
+                const FDrawRange* Range = DrawRanges.Find(MatName);
+                if (Range && Range->IndexCount > 0)
+                    OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
             }
             return;
         }
@@ -527,7 +557,8 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
     }
 }
 
-void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap)
+
+/*void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap)
 {
     FMatrix MVP = FMatrix::Identity * VP;
     FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
@@ -554,6 +585,51 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
             Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &Batch->VertexBuffer, &Renderer.Stride, &offset);
             Renderer.Graphics->DeviceContext->IASetIndexBuffer(Batch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
             Renderer.Graphics->DeviceContext->DrawIndexed(Batch->IndicesNum, 0, 0);
+        }
+    }
+}*/
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap,
+                            const FOctreeNode* RootNode)
+{
+    std::string DebugText = RootNode->DumpDrawRangesRecursive(3);
+    
+    if (!RootNode) return;
+
+    const TMap<FString, FRenderBatchData>& RootBatches = RootNode->CachedBatchData;
+
+    FMatrix MVP = FMatrix::Identity * VP;
+    FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
+    Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
+
+    for (const auto& Pair : RenderMap)
+    {
+        const FString& MaterialName = Pair.Key;
+        const TArray<FRenderBatchData*>& Batches = Pair.Value;
+
+        const FRenderBatchData* RootBatch = RootBatches.Find(MaterialName);
+        if (!RootBatch || !RootBatch->VertexBuffer || !RootBatch->IndexBuffer || RootBatch->IndicesNum == 0)
+            continue;
+
+        // 머티리얼 한 번 설정
+        Renderer.UpdateMaterial(RootBatch->MaterialInfo);
+
+        // 루트의 버퍼 바인딩 (한 번만)
+        UINT offset = 0;
+        Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RootBatch->VertexBuffer, &Renderer.Stride, &offset);
+        Renderer.Graphics->DeviceContext->IASetIndexBuffer(RootBatch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+        // 각 Batch → OwnerNode → DrawRange 기반으로 Draw
+        for (FRenderBatchData* Batch : Batches)
+        {
+            if (!Batch || !Batch->OwnerNode)
+                continue;
+
+            const FDrawRange* Range = Batch->OwnerNode->DrawRanges.Find(MaterialName);
+            if (!Range || Range->IndexCount == 0)
+                continue;
+
+            Batch->LastUsedFrame = GCurrentFrame;
+            Renderer.Graphics->DeviceContext->DrawIndexed(Range->IndexCount, Range->IndexStart, 0);
         }
     }
 }
@@ -586,4 +662,170 @@ void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
             Children[i]->TickBuffers(CurrentFrame, FrameThreshold);
         }
     }
+}
+/*
+void FOctreeNode::AssignAllDrawRanges()
+{
+    TMap<FString, FDrawRange> RootRanges;
+
+    for (const auto& Pair : CachedBatchData)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& Batch = Pair.Value;
+
+        FDrawRange Range;
+        Range.IndexStart = 0;
+        Range.IndexCount = Batch.Indices.Num();
+
+        DrawRanges.Add(MatName, Range); // 루트 자신의 범위
+        RootRanges.Add(MatName, Range); // 자식 분배용
+    }
+
+    // 재귀 시작
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+            Children[i]->ComputeDrawRangesFromParent(RootRanges);
+    }
+}
+*/
+void FOctreeNode::AssignAllDrawRanges()
+{
+    for (const auto& Pair : CachedBatchData)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& Batch = Pair.Value;
+
+        FDrawRange Range;
+        Range.IndexStart = 0;
+        Range.IndexCount = Batch.Indices.Num();
+
+        DrawRanges.Add(MatName, Range);
+    }
+
+    // 각 머티리얼에 대해 자식들에게 분배
+    for (const auto& Pair : CachedBatchData)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& Batch = Pair.Value;
+
+        uint32 RunningStart = 0;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            if (!Children[i]) continue;
+            auto* ChildBatch = Children[i]->CachedBatchData.Find(MatName);
+            if (!ChildBatch) continue;
+
+            uint32 Count = ChildBatch->Indices.Num();
+            if (Count == 0) continue;
+
+            FDrawRange ChildRange { RunningStart, Count };
+
+            TMap<FString, FDrawRange> MatOnly;
+            MatOnly.Add(MatName, ChildRange);
+            Children[i]->ComputeDrawRangesFromParent(MatOnly);
+
+            RunningStart += Count;
+        }
+    }
+}
+void FOctreeNode::ComputeDrawRangesFromParent(const TMap<FString, FDrawRange>& InRanges)
+{
+    // 1. 본인 DrawRange 설정
+    for (auto& Pair : CachedBatchData)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& MyBatch = Pair.Value;
+
+        const FDrawRange* RangeFromParent = InRanges.Find(MatName);
+        if (!RangeFromParent) continue;
+
+        FDrawRange& MyRange = DrawRanges.FindOrAdd(MatName);
+        MyRange.IndexStart = RangeFromParent->IndexStart;
+        MyRange.IndexCount = MyBatch.Indices.Num();
+    }
+
+    // 2. 자식에게 머티리얼별로 정확히 나눠서 전달
+    for (const auto& ParentPair : InRanges)
+    {
+        const FString& MatName = ParentPair.Key;
+        const FDrawRange& ParentRange = ParentPair.Value;
+
+        uint32 RunningStart = ParentRange.IndexStart;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            if (!Children[i]) continue;
+
+            FRenderBatchData* ChildBatch = Children[i]->CachedBatchData.Find(MatName);
+            if (!ChildBatch) continue;
+
+            uint32 Count = ChildBatch->Indices.Num();
+            if (Count == 0) continue;
+
+            FDrawRange ChildRange;
+            ChildRange.IndexStart = RunningStart;
+            ChildRange.IndexCount = Count;
+
+            TMap<FString, FDrawRange> ChildRanges;
+            ChildRanges.Add(MatName, ChildRange);
+
+            RunningStart += Count;
+
+            Children[i]->ComputeDrawRangesFromParent(ChildRanges);
+        }
+    }
+}
+
+
+std::string FOctreeNode::DumpDrawRangesRecursive(int MaxDepth, int IndentLevel) const
+{
+    std::ostringstream oss;
+
+    // 들여쓰기 설정
+    std::string Indent(IndentLevel * 2, ' ');
+
+    // 현재 노드 헤더 출력
+    if (Depth == 0)
+        oss << Indent << "Root Range:\n";
+    else
+        oss << Indent << "Child";
+
+    // 경로 출력 (Child[0][2][1]...)
+    FOctreeNode const* Curr = this;
+    std::vector<int> Path;
+    while (Curr->Parent)
+    {
+        Path.push_back(Curr->ChildIndex);
+        Curr = Curr->Parent;
+    }
+    std::reverse(Path.begin(), Path.end());
+    for (int idx : Path)
+        oss << "[" << idx << "]";
+    if (Depth != 0)
+        oss << " Range:\n";
+
+    // DrawRange 출력
+    for (const auto& Pair : DrawRanges)
+    {
+        const FString& MatName = Pair.Key;
+        const FDrawRange& Range = Pair.Value;
+        uint32 End = Range.IndexStart + Range.IndexCount;
+
+        oss << Indent << "  [" << (*MatName) << "] : "
+            << Range.IndexStart << " ~ " << End << " (Count: " << Range.IndexCount << ")\n";
+    }
+
+    // 재귀
+    if (Depth < MaxDepth)
+    {
+        for (int i = 0; i < 8; ++i)
+        {
+            if (Children[i])
+                oss << Children[i]->DumpDrawRangesRecursive(MaxDepth, IndentLevel + 1);
+        }
+    }
+
+    return oss.str();
 }

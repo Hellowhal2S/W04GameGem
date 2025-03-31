@@ -1126,8 +1126,8 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     TMap<FString, TArray<FRenderBatchData*>> RenderMap;
     World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderMap);
     // 2. 렌더링
-    RenderCollectedBatches(*this, View * Proj, RenderMap);
-
+    //RenderCollectedBatches(*this, View * Proj, RenderMap,World->SceneOctree->GetRoot()->CachedBatchData);
+    RenderCollectedBatches(*this,View*Proj,RenderMap,World->SceneOctree->GetRoot());
     if (World->HighlightedMeshComp)
     {
         World->RenderHighlightedComponent(*this, View * Proj);
