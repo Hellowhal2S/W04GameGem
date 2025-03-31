@@ -187,6 +187,7 @@
     <ClCompile Include="Engine\Source\Runtime\Core\HAL\PlatformMemory.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Frustum.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\JungleMath.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Math\SIMD\SimdUtility.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Ray.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Math\Vector.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.cpp" />
@@ -342,6 +343,7 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\Delegate.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Delegates\DelegateCombination.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Frustum.h" />
+    <ClInclude Include="Engine\Source\Runtime\Core\Math\SIMD\SimdUtility.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Math\Ray.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />

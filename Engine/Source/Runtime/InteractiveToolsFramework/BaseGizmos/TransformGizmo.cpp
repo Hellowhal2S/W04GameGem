@@ -9,15 +9,15 @@
 
 UTransformGizmo::UTransformGizmo()
 {
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_loc_x.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_loc_y.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_loc_z.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_rot_x.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_rot_y.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_rot_z.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_scale_x.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_scale_y.obj");
-    FManagerOBJ::CreateStaticMesh("Assets/gizmo_scale_z.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_loc_x.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_loc_y.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_loc_z.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_rot_x.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_rot_y.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_rot_z.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_scale_x.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_scale_y.obj");
+    // FManagerOBJ::CreateStaticMesh("Assets/gizmo_scale_z.obj");
 
     SetRootComponent(
         AddComponent<USceneComponent>()

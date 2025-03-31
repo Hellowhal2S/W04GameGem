@@ -28,7 +28,7 @@ struct FFrustumPlane
     FVector Normal;
     float Distance;
 
-    bool IntersectAABB(const FBoundingBox& AABB) const;
+    bool IntersectAABB(const FBoundingBox& AABB) const; // 안씀
 };
 
 class FFrustum
@@ -37,10 +37,10 @@ public:
     FFrustum() = default;
 
     /** ViewProjection 행렬로부터 6개의 평면을 생성합니다 */
-    void ConstructFrustum(const FMatrix& ViewProjectionMatrix);
+    void ConstructFrustum(const FMatrix& ViewProjectionMatrix); 
 
     /** AABB가 프러스텀에 속해있는지 확인합니다 */
-    bool Intersect(const FBoundingBox& AABB) const;
+    bool Intersect(const FBoundingBox& AABB) const; // 안씀
 
     EFrustumContainment CheckContainment(const FBoundingBox& AABB) const;
 
