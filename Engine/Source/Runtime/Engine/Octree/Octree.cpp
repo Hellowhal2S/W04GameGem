@@ -465,33 +465,6 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
             RenderData.IndicesNum = RenderData.Indices.Num();
         }
     }
-    /*
-    if (Depth >= GRenderDepthMin && Depth <= GRenderDepthMax)
-    {
-        for (auto& Pair : CachedBatchData)
-        {
-            FRenderBatchData& RenderData = Pair.Value;
-
-            if (!RenderData.Vertices.IsEmpty())
-            {
-                RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
-                    RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
-            }
-
-            if (!RenderData.Indices.IsEmpty())
-            {
-                RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
-                    RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
-            }
-
-            RenderData.IndicesNum = RenderData.Indices.Num();
-        }
-    }
-    for (int i = 0; i < 8; ++i)
-    {
-        if (Children[i])
-            Children[i]->BuildBatchBuffers(Renderer);
-    }*/
     FStatRegistry::RegisterResult(Timer);
 }
 
@@ -556,38 +529,6 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
             Children[i]->CollectRenderNodes(Frustum, OutRenderMap);
     }
 }
-
-
-/*void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap)
-{
-    FMatrix MVP = FMatrix::Identity * VP;
-    FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
-
-    Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
-    for (const auto& Pair : RenderMap)
-    {
-        const TArray<FRenderBatchData*>& Batches = Pair.Value;
-        if (Batches.IsEmpty()) continue;
-
-        // 머티리얼 설정 (한 번만)
-        FRenderBatchData* First = Batches[0];
-        Renderer.UpdateMaterial(First->MaterialInfo);
-
-        for (FRenderBatchData* Batch : Batches)
-        {
-            Batch->CreateBuffersIfNeeded(Renderer);
-            if (!Batch->VertexBuffer || !Batch->IndexBuffer)
-                continue;
-
-            Batch->LastUsedFrame = GCurrentFrame;
-
-            UINT offset = 0;
-            Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &Batch->VertexBuffer, &Renderer.Stride, &offset);
-            Renderer.Graphics->DeviceContext->IASetIndexBuffer(Batch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-            Renderer.Graphics->DeviceContext->DrawIndexed(Batch->IndicesNum, 0, 0);
-        }
-    }
-}*/
 void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap,
                             const FOctreeNode* RootNode)
 {
