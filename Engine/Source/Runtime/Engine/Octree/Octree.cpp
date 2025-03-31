@@ -63,7 +63,10 @@ FOctreeNode::FOctreeNode(const FBoundingBox& InBounds, int InDepth)
 {
     BoundingSphere = Bounds.GetBoundingSphere(true);
 }
-
+FOctree::~FOctree()
+{
+    delete Root;
+}
 FOctreeNode::~FOctreeNode()
 {
     for (int i = 0; i < 8; ++i)
@@ -182,10 +185,7 @@ FOctree::FOctree(const FBoundingBox& InBounds)
 {
 }
 
-FOctree::~FOctree()
-{
-    delete Root;
-}
+
 
 void FOctree::Build()
 {
@@ -335,11 +335,12 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
 void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
 {
     if (!RootNode)
-        RootNode = this; // 최초 호출 시 루트 노드로 설정
+        RootNode = this;
 
     VertexBufferSizeInBytes = 0;
     IndexBufferSizeInBytes = 0;
 
+    // LEAF일 경우 Root에 버퍼 작성, Node에는 인덱스 길이만 저장
     if (bIsLeaf)
     {
         for (UPrimitiveComponent* Comp : Components)
@@ -363,8 +364,10 @@ void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
             {
                 const auto& Subset = Subsets[i];
                 const auto& MatInfo = Materials[Subset.MaterialIndex];
+                const FString& MatName = MatInfo.MTLName;
 
-                FRenderBatchRootData& RootBatch = RootNode->CachedBatchRootData.FindOrAdd(MatInfo.MTLName);
+                // 루트에 버퍼 추가
+                FRenderBatchRootData& RootBatch = RootNode->CachedBatchRootData.FindOrAdd(MatName);
                 UINT VertexStart = (UINT)RootBatch.Vertices.Num();
                 TMap<UINT, UINT> IndexMap;
 
@@ -384,46 +387,43 @@ void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
                 }
 
 
-                FRenderBatchNodeData& MyBatch = CachedBatchNodeData.FindOrAdd(MatInfo.MTLName);
-                MyBatch.MaterialInfo = MatInfo;
-                MyBatch.IndicesNum += Subset.IndexCount;
-                MyBatch.OwnerNode = this;
+                // 이 노드에는 길이만 저장
+                FRenderBatchNodeData& NodeData = CachedBatchNodeData.FindOrAdd(MatName);
+                NodeData.MaterialInfo = MatInfo;
+                NodeData.IndicesNum += Subset.IndexCount;
+                NodeData.OwnerNode = this;
             }
         }
     }
 
-    // 자식 노드 재귀 호출
+    // 자식 재귀 처리
     for (int i = 0; i < 8; ++i)
     {
         if (Children[i])
-        {
             Children[i]->BuildBatchRenderData(RootNode);
-        }
     }
 
-    // 자식들의 IndexCount를 합산하여 자신에게 설정
-    for (const auto& Pair : RootNode->CachedBatchRootData)
+    // 자식 인덱스 정보 병합
+    for (int i = 0; i < 8; ++i)
     {
-        const FString& MatName = Pair.Key;
-        uint32 TotalCount = 0;
+        if (!Children[i]) continue;
 
-        for (int i = 0; i < 8; ++i)
+        for (const auto& ChildPair : Children[i]->CachedBatchNodeData)
         {
-            if (!Children[i]) continue;
-            auto* ChildEntry = Children[i]->CachedBatchNodeData.Find(MatName);
-            if (ChildEntry)
-                TotalCount += ChildEntry->IndicesNum;
-        }
+            const FString& MatName = ChildPair.Key;
+            const FRenderBatchNodeData& ChildBatch = ChildPair.Value;
 
-        if (TotalCount > 0)
-        {
+            if (ChildBatch.IndicesNum == 0)
+                continue;
+
             FRenderBatchNodeData& MyBatch = CachedBatchNodeData.FindOrAdd(MatName);
-            MyBatch.MaterialInfo = MyBatch.MaterialInfo; // 상속용
-            MyBatch.IndicesNum += TotalCount;
+            MyBatch.MaterialInfo = ChildBatch.MaterialInfo; // 정확한 복사
+            MyBatch.IndicesNum += ChildBatch.IndicesNum;
             MyBatch.OwnerNode = this;
         }
     }
 }
+
 
 
 void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
