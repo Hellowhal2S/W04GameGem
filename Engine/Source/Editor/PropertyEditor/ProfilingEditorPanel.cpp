@@ -32,8 +32,8 @@ void ProfilingEditorPanel::Render()
         ImGui::Text("Picking Time %.4fms\nNum Attempts: %d\nAccumulated Time %.2fms",FStatRegistry::GetLastMilliseconds("Picking"),FStatRegistry::TotalPickCount,FStatRegistry::TotalPickTime);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
-        //ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
-        //ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
+        ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
         
         //ImGui::SliderInt("KDTreeDepth", &GEngineLoop.GetWorld()->SceneOctree->MaxDepthKD, 0, 5);
         //if (ImGui::Checkbox("UseKD",&GEngineLoop.GetWorld()->SceneOctree->bUseKD));
