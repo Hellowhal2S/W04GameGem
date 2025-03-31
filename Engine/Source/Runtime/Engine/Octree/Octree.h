@@ -94,10 +94,14 @@ public:
 
     UPrimitiveComponent* Raycast(const FRay& Ray, float& OutDistance) const;
     UPrimitiveComponent* RaycastWithKD(const FRay& Ray, float& OutDistance, int MaxDepthKD) const;
-    void AssignAllDrawRanges(); // 루트에서 호출하는 함수
-    void ComputeDrawRangesFromParentLOD(const FString& Key, const TMap<ELODLevel, FDrawRange>& InRanges);
+    void AssignAllDrawRangesLODWrapped();
+    void ComputeDrawRangesFromParentLODWrapped(
+        const FString& MatName,
+        const TMap<ELODLevel, FDrawRange>& InRanges);
 
-    std::string DumpDrawRangesRecursive(int MaxDepth, int IndentLevel = 0) const;
+
+    std::string DumpLODRangeRecursive(int MaxDepth, int IndentLevel = 0) const;
+
 
     //TMap<FString, FDrawRange> DrawRanges; // 루트 기준 범위 정보 저장
 };
