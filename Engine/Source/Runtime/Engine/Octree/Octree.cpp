@@ -255,17 +255,17 @@ void FOctreeNode::BuildBatchRenderData()
              const auto& Materials = RenderData->Materials;
              const auto& Subsets = RenderData->MaterialSubsets;
 
-#pragma region LODRenderData
-        FWString LODX5 = StaticMeshComp->GetStaticMesh()->GetRenderData()->ObjectName + L"X5";
-        OBJ::FStaticMeshRenderData* RenderDataX5 = FManagerOBJ::GetStaticMesh(LODX5)->GetRenderData();
-        const auto& MeshVerticesX5 = RenderDataX5->Vertices;
-        const auto& MeshIndicesX5 = RenderDataX5->Indices;
-        
-        FWString LODX1 = StaticMeshComp->GetStaticMesh()->GetRenderData()->ObjectName + L"X1";
-        OBJ::FStaticMeshRenderData* RenderDataX1 = FManagerOBJ::GetStaticMesh(LODX1)->GetRenderData();
-        const auto& MeshVerticesX1 = RenderDataX1->Vertices;
-        const auto& MeshIndicesX1 = RenderDataX1->Indices;
-#pragma endregion
+    #pragma region LODRenderData
+            FWString LODX5 = StaticMeshComp->GetStaticMesh()->GetRenderData()->ObjectName + L"X5";
+            OBJ::FStaticMeshRenderData* RenderDataX5 = FManagerOBJ::GetStaticMesh(LODX5)->GetRenderData();
+            const auto& MeshVerticesX5 = RenderDataX5->Vertices;
+            const auto& MeshIndicesX5 = RenderDataX5->Indices;
+            
+            FWString LODX1 = StaticMeshComp->GetStaticMesh()->GetRenderData()->ObjectName + L"X1";
+            OBJ::FStaticMeshRenderData* RenderDataX1 = FManagerOBJ::GetStaticMesh(LODX1)->GetRenderData();
+            const auto& MeshVerticesX1 = RenderDataX1->Vertices;
+            const auto& MeshIndicesX1 = RenderDataX1->Indices;
+    #pragma endregion
         
              const FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
                  StaticMeshComp->GetWorldLocation(),
@@ -361,45 +361,6 @@ void FOctreeNode::BuildBatchRenderData()
              }
          }
     
-        const FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
-            StaticMeshComp->GetWorldLocation(),
-            StaticMeshComp->GetWorldRotation(),
-            StaticMeshComp->GetWorldScale()
-        );
-
-        for (int i = 0; i < Subsets.Num(); ++i)
-        {
-            const auto& Subset = Subsets[i];
-            const auto& MatInfo = Materials[Subset.MaterialIndex];
-
-            FRenderBatchData& Entry = CachedBatchData.FindOrAdd(MatInfo.MTLName);
-            Entry.MaterialInfo = MatInfo;
-
-            UINT VertexStart = (UINT)Entry.Vertices.Num();
-            TMap<UINT, UINT> IndexMap;
-
-            for (UINT j = 0; j < Subset.IndexCount; ++j)
-            {
-                UINT oldIndex = MeshIndices[Subset.IndexStart + j];
-                if (!IndexMap.Contains(oldIndex))
-                {
-                    //FVertexCompact TransformedVertex = ConvertToCompact(MeshVertices[oldIndex]);
-                    FVertexCompact TransformedVertex = MeshVertices[oldIndex];
-                    // 월드 위치 변환
-                    FVector LocalPosition{TransformedVertex.x, TransformedVertex.y, TransformedVertex.z};
-                    FVector WorldPosition = ModelMatrix.TransformPosition(LocalPosition);
-                    TransformedVertex.x = WorldPosition.x;
-                    TransformedVertex.y = WorldPosition.y;
-                    TransformedVertex.z = WorldPosition.z;
-
-                    Entry.Vertices.Add(TransformedVertex);
-
-                    IndexMap.Add(oldIndex, VertexStart++);
-                }
-                Entry.Indices.Add(IndexMap[oldIndex]);
-            }
-        }
-    }
     // Step 3. 최종 버퍼 크기 계산 (현재 Vertex/Index는 FVertexCompact, uint32 기준)
     for (const auto& Pair : CachedBatchData)
     {
@@ -431,48 +392,51 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
             }
 
             RenderData.IndicesNum = RenderData.Indices.Num();
+            RenderData.Vertices.Empty();
+            RenderData.Indices.Empty();
         }
-    }
+    
 #pragma region LODRenderBatches
-    for (auto& Pair : CachedBatchDataX5)
-    {
-        FRenderBatchData& RenderData = Pair.Value;
-
-        if (!RenderData.Vertices.IsEmpty())
+        for (auto& Pair : CachedBatchDataX5)
         {
-            RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
-                RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
-        }
+            FRenderBatchData& RenderData = Pair.Value;
 
-        if (!RenderData.Indices.IsEmpty())
+            if (!RenderData.Vertices.IsEmpty())
+            {
+                RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
+                    RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
+            }
+
+            if (!RenderData.Indices.IsEmpty())
+            {
+                RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
+                    RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
+            }
+
+            RenderData.IndicesNum = RenderData.Indices.Num();
+            RenderData.Vertices.Empty();
+            RenderData.Indices.Empty();
+        }
+        for (auto& Pair : CachedBatchDataX1)
         {
-            RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
-                RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
+            FRenderBatchData& RenderData = Pair.Value;
+
+            if (!RenderData.Vertices.IsEmpty())
+            {
+                RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
+                    RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
+            }
+
+            if (!RenderData.Indices.IsEmpty())
+            {
+                RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
+                    RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
+            }
+
+            RenderData.IndicesNum = RenderData.Indices.Num();
+            RenderData.Vertices.Empty();
+            RenderData.Indices.Empty();
         }
-
-        RenderData.IndicesNum = RenderData.Indices.Num();
-        RenderData.Vertices.Empty();
-        RenderData.Indices.Empty();
-    }
-    for (auto& Pair : CachedBatchDataX1)
-    {
-        FRenderBatchData& RenderData = Pair.Value;
-
-        if (!RenderData.Vertices.IsEmpty())
-        {
-            RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
-                RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
-        }
-
-        if (!RenderData.Indices.IsEmpty())
-        {
-            RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
-                RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
-        }
-
-        RenderData.IndicesNum = RenderData.Indices.Num();
-        RenderData.Vertices.Empty();
-        RenderData.Indices.Empty();
     }
 #pragma endregion
 
@@ -519,11 +483,39 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
 
         if (Depth >= GRenderDepthMin)
         {
-            for (auto& Pair : CachedBatchData)
+            FVector midPoint = (Bounds.max + Bounds.min) *0.5f;
+            FVector cameraLoc = GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->ViewTransformPerspective.GetLocation();
+            float distance =  midPoint.Distance(cameraLoc);
+
+            for (auto& Pair : CachedBatchDataX1)
             {
                 const FString& MatName = Pair.Key;
                 OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
             }
+            // if (distance < 20.0f)
+            // {
+            //     for (auto& Pair : CachedBatchData)
+            //     {
+            //         const FString& MatName = Pair.Key;
+            //         OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
+            //     }
+            // }
+            // else if (distance < 50.0f)
+            // {
+            //     for (auto& Pair : CachedBatchDataX5)
+            //     {
+            //         const FString& MatName = Pair.Key;
+            //         OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
+            //     }
+            // }
+            // else
+            // {
+            //     for (auto& Pair : CachedBatchDataX1)
+            //     {
+            //         const FString& MatName = Pair.Key;
+            //         OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
+            //     }
+            // }
             return;
         }
     }
@@ -568,14 +560,10 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
 
 void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP)
 {
+    return ;
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
-    if (Containment == EFrustumContainment::Contains || Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax)
+    if (Containment == EFrustumContainment::Contains||Containment == EFrustumContainment::Intersects&&Depth==GRenderDepthMax)
     {
-        if (!GOcclusionSystem->IsRegionVisible(NodeId))
-        {
-            return;
-        }
-
         if (Depth >= GRenderDepthMin)
         {
             // UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
@@ -583,7 +571,7 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
             FVector midPoint = (Bounds.max + Bounds.min) *0.5f;
             FVector cameraLoc = GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->ViewTransformPerspective.GetLocation();
             float distance =  midPoint.Distance(cameraLoc);
-
+            
             if ( distance < 20.f)
             {
                 for (auto& Pair : CachedBatchData) // ← 수정: const 제거
@@ -656,16 +644,16 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
                 {
                     FRenderBatchData& RenderData = Pair.Value;
 
-                // Lazy 생성: 필요한 경우에만 생성
-                FScopeCycleCounter Timer("CreateBuffers");
-                RenderData.CreateBuffersIfNeeded(Renderer);
-                FStatRegistry::RegisterResult(Timer);
+                    // 🟡 Lazy 생성: 필요한 경우에만 생성
+                    FScopeCycleCounter Timer("CreateBuffers");
+                    RenderData.CreateBuffersIfNeeded(Renderer);
+                    FStatRegistry::RegisterResult(Timer);
 
                     if (!RenderData.VertexBuffer || !RenderData.IndexBuffer)
                         continue;
 
-                // 사용 시점 기록
-                RenderData.LastUsedFrame = GCurrentFrame;
+                    // ✅ 사용 시점 기록
+                    RenderData.LastUsedFrame = GCurrentFrame;
 
                     // 머티리얼 설정
                     Renderer.UpdateMaterial(RenderData.MaterialInfo);
