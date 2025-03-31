@@ -196,10 +196,10 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Octree\Octree.cpp">
       <AssemblerOutput>NoListing</AssemblerOutput>
-      <AssemblerListingLocation>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</AssemblerListingLocation>
+      <AssemblerListingLocation>$(ProjectDir)Intermediate\Build\x64\Release\</AssemblerListingLocation>
       <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
       <BrowseInformation>false</BrowseInformation>
-      <BrowseInformationFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</BrowseInformationFile>
+      <BrowseInformationFile>$(ProjectDir)Intermediate\Build\x64\Release\</BrowseInformationFile>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <CompileAs>Default</CompileAs>
       <ConformanceMode>true</ConformanceMode>
@@ -223,18 +223,18 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <MinimalRebuild>false</MinimalRebuild>
-      <ModuleDependenciesFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</ModuleDependenciesFile>
-      <ModuleOutputFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</ModuleOutputFile>
+      <ModuleDependenciesFile>$(ProjectDir)Intermediate\Build\x64\Release\</ModuleDependenciesFile>
+      <ModuleOutputFile>$(ProjectDir)Intermediate\Build\x64\Release\</ModuleOutputFile>
       <OmitDefaultLibName>false</OmitDefaultLibName>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <Optimization>MaxSpeed</Optimization>
-      <ObjectFileName>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</ObjectFileName>
+      <ObjectFileName>$(ProjectDir)Intermediate\Build\x64\Release\</ObjectFileName>
       <CallingConvention>Cdecl</CallingConvention>
-      <ProgramDataBaseFileName>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\vc143.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(ProjectDir)Intermediate\Build\x64\Release\vc143.pdb</ProgramDataBaseFileName>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>$(ProjectDir)Intermediate\Build\x64\Release\Week0v2.pch</PrecompiledHeaderOutputFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessKeepComments>false</PreprocessKeepComments>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
@@ -242,21 +242,21 @@
       <RuntimeLibrary>MultiThreadedDll</RuntimeLibrary>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
       <ShowIncludes>false</ShowIncludes>
-      <SourceDependenciesFile>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</SourceDependenciesFile>
+      <SourceDependenciesFile>$(ProjectDir)Intermediate\Build\x64\Release\</SourceDependenciesFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <SpectreMitigation>false</SpectreMitigation>
       <StructMemberAlignment>Default</StructMemberAlignment>
       <SupportJustMyCode>false</SupportJustMyCode>
-      <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
+      <TrackerLogDirectory>$(ProjectDir)Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
       <TranslateIncludes>false</TranslateIncludes>
       <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
       <TreatWarningAsError>false</TreatWarningAsError>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <UseFullPaths>true</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <XMLDocumentationFileName>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\</XMLDocumentationFileName>
+      <XMLDocumentationFileName>$(ProjectDir)Intermediate\Build\x64\Release\</XMLDocumentationFileName>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <IntelJCCErratum>false</IntelJCCErratum>
       <BuildStlModules>false</BuildStlModules>
@@ -267,7 +267,24 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_UNICODE;UNICODE;</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\ThirdParty\DirectXTK\Include;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Shaders;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\InteractiveToolsFramework;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\ThirdParty;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Windows;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\ThirdParty\include;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Editor;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\CoreUObject;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Core;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Launch;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Engine;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source\Runtime\Engine\Classes;C:\Users\Jungle\Documents\GitHub\W04GameGem\\Engine\Source;C:\Users\Jungle\Documents\GitHub\W04GameGem\;;C:\vcpkg\installed\x64-windows\include</AdditionalIncludeDirectories>
+<AdditionalIncludeDirectories>
+$(ProjectDir)Engine\Source\ThirdParty\DirectXTK\Include;
+$(ProjectDir)Shaders;
+$(ProjectDir)Engine\Source\Runtime\InteractiveToolsFramework;
+$(ProjectDir)Engine\Source\ThirdParty;
+$(ProjectDir)Engine\Source\Runtime;
+$(ProjectDir)Engine\Source\Runtime\Windows;
+$(ProjectDir)Engine\Source\ThirdParty\include;
+$(ProjectDir)Engine\Source\Editor;
+$(ProjectDir)Engine\Source\Runtime\CoreUObject;
+$(ProjectDir)Engine\Source\Runtime\Core;
+$(ProjectDir)Engine\Source\Runtime\Launch;
+$(ProjectDir)Engine\Source\Runtime\Engine;
+$(ProjectDir)Engine\Source\Runtime\Engine\Classes;
+$(ProjectDir)Engine\Source;
+$(ProjectDir);
+C:\vcpkg\installed\x64-windows\include
+</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 </AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LinkCompiled>true</LinkCompiled>
@@ -430,8 +447,8 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\CompactMeshPixelShader.hlsl">
-      <ObjectFileOutput>C:\Users\Jungle\Documents\GitHub\W04GameGem\Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
-      <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
+      <ObjectFileOutput>$(ProjectDir)Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
+      <TrackerLogDirectory>$(ProjectDir)Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
       <EntryPointName>mainPS</EntryPointName>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ShaderModel>5.0</ShaderModel>
@@ -441,8 +458,8 @@
       <ShaderType>Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\CompactMeshVertexShader.hlsl">
-      <ObjectFileOutput>C:\Users\Jungle\Documents\GitHub\W04GameGem\Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
-      <TrackerLogDirectory>C:\Users\Jungle\Documents\GitHub\W04GameGem\Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
+      <ObjectFileOutput>$(ProjectDir)Binaries\x64\Release\%(Filename).cso</ObjectFileOutput>
+      <TrackerLogDirectory>$(ProjectDir)Intermediate\Build\x64\Release\Week0v2.tlog\</TrackerLogDirectory>
       <EntryPointName>mainVS</EntryPointName>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ShaderModel>5.0</ShaderModel>
