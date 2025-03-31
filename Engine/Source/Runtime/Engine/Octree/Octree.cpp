@@ -487,7 +487,7 @@ void FOctreeNode::ClearKDDatas(int MaxDepthKD)
     }
 }
 
-void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchNodeData*>>& OutRenderMap)
+void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TArray<FOctreeNode*>& OutNodes)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
     if (Containment == EFrustumContainment::Contains ||
@@ -495,13 +495,7 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
     {
         if (Depth >= GRenderDepthMin)
         {
-            for (auto& Pair : CachedBatchNodeData)
-            {
-                const FString& MatName = Pair.Key;
-                const FDrawRange* Range = DrawRanges.Find(MatName);
-                if (Range && Range->IndexCount > 0)
-                    OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
-            }
+            OutNodes.Add(this);
             return;
         }
     }
@@ -509,46 +503,56 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
     for (int i = 0; i < 8; ++i)
     {
         if (Children[i])
-            Children[i]->CollectRenderNodes(Frustum, OutRenderMap);
+            Children[i]->CollectRenderNodes(Frustum, OutNodes);
     }
 }
-void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchNodeData*>>& RenderMap,
-                            const FOctreeNode* RootNode)
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode)
 {
-    std::string DebugText = RootNode->DumpDrawRangesRecursive(3);
-    
     if (!RootNode) return;
-
     const TMap<FString, FRenderBatchRootData>& RootBatches = RootNode->CachedBatchRootData;
 
     FMatrix MVP = FMatrix::Identity * VP;
     FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
     Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
 
-    for (const auto& Pair : RenderMap)
+    // 머티리얼 단위로 묶기
+    TMap<FString, TArray<const FOctreeNode*>> MaterialNodeMap;
+    for (const FOctreeNode* Node : RenderNodes)
+    {
+        for (const auto& Pair : Node->CachedBatchNodeData)
+        {
+            const FString& MaterialName = Pair.Key;
+            const FDrawRange* Range = Node->DrawRanges.Find(MaterialName);
+            if (Range && Range->IndexCount > 0)
+                MaterialNodeMap.FindOrAdd(MaterialName).Add(Node);
+        }
+    }
+
+    // 머티리얼 단위 렌더링
+    for (const auto& Pair : MaterialNodeMap)
     {
         const FString& MaterialName = Pair.Key;
-        const TArray<FRenderBatchNodeData*>& Batches = Pair.Value;
+        const TArray<const FOctreeNode*>& Nodes = Pair.Value;
 
         const FRenderBatchRootData* RootBatch = RootBatches.Find(MaterialName);
         if (!RootBatch || !RootBatch->VertexBuffer || !RootBatch->IndexBuffer)
             continue;
 
-        // 머티리얼 한 번 설정
-        Renderer.UpdateMaterial(Batches[0]->MaterialInfo);
+        // 머티리얼 설정
+        const auto& FirstNode = Nodes[0];
+        const auto* BatchData = FirstNode->CachedBatchNodeData.Find(MaterialName);
+        if (BatchData)
+            Renderer.UpdateMaterial(BatchData->MaterialInfo);
 
-        // 루트의 버퍼 바인딩 (한 번만)
+        // 루트 버퍼 바인딩
         UINT offset = 0;
         Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RootBatch->VertexBuffer, &Renderer.Stride, &offset);
         Renderer.Graphics->DeviceContext->IASetIndexBuffer(RootBatch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
-        // 각 Batch → OwnerNode → DrawRange 기반으로 Draw
-        for (FRenderBatchNodeData* Batch : Batches)
+        // Draw
+        for (const FOctreeNode* Node : Nodes)
         {
-            if (!Batch || !Batch->OwnerNode)
-                continue;
-
-            const FDrawRange* Range = Batch->OwnerNode->DrawRanges.Find(MaterialName);
+            const FDrawRange* Range = Node->DrawRanges.Find(MaterialName);
             if (!Range || Range->IndexCount == 0)
                 continue;
 
@@ -556,6 +560,7 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
         }
     }
 }
+
 
 void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
 {

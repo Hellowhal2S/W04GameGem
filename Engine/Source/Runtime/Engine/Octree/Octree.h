@@ -78,7 +78,7 @@ public:
     //Lazy Segtree에서 사용. FrameThreshold프레임만큼 사용하지 않은 버퍼 할당 해제. 현재 사용 X
     void TickBuffers(int CurrentFrame, int FrameThreshold);
     //현재 렌더할 노드를 결정해서 FRenderBatchData를 반환
-    void CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchNodeData*>>& OutRenderMap);
+    void CollectRenderNodes(const FFrustum& Frustum, TArray<FOctreeNode*>& OutNodes);
 
     UPrimitiveComponent* Raycast(const FRay& Ray, float& OutDistance) const;
     UPrimitiveComponent* RaycastWithKD(const FRay& Ray, float& OutDistance, int MaxDepthKD) const;
@@ -117,8 +117,4 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
 //FRenderer::RenderStaticMesh에서 사용(현재 사용 X)
 const int FrameThreshold = 2; // 프레임 이상 사용 안 한 버퍼 제거
 //CollectRenderNodes를 통해 선별한 노드의 데이터를 렌더.
-//void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FOctreeNode*>>& RenderMap, const FRenderBatchData& RootBatch);
-void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchNodeData*>>& RenderMap,
-                            const FOctreeNode* RootNode);
-
-//void RenderCollected//Batches(FRenderer& Renderer,const FMatrix& VP,const TMap<FString, TArray<FRenderBatchData*>>& RenderMap);
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode);

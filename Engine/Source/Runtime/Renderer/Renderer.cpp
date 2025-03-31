@@ -1123,11 +1123,11 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     FScopeCycleCounter BatchTimer("BatchTimer");
     //World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
 
-    TMap<FString, TArray<FRenderBatchNodeData*>> RenderMap;
-    World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderMap);
+    TArray<FOctreeNode*> RenderNodes;
+    World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderNodes);
     // 2. 렌더링
     //RenderCollectedBatches(*this, View * Proj, RenderMap,World->SceneOctree->GetRoot()->CachedBatchData);
-    RenderCollectedBatches(*this,View*Proj,RenderMap,World->SceneOctree->GetRoot());
+    RenderCollectedBatches(*this,View*Proj,RenderNodes,World->SceneOctree->GetRoot());
     FStatRegistry::RegisterResult(BatchTimer);
     if (World->HighlightedMeshComp)
     {
