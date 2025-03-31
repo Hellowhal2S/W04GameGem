@@ -63,11 +63,13 @@ void OcclusionQuerySystem::EndFrame(ID3D11DeviceContext* context)
 
         if (hr == S_OK)
         {
-            region.Visible = samples > 0;
+            region.Visible = samples > 10;
             region.LastValidFrame = m_currentFrame;
         }
     }
 }
+
+
 
 bool OcclusionQuerySystem::IsRegionVisible(int id) const
 {

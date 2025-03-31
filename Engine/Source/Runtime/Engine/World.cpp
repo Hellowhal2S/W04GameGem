@@ -17,6 +17,8 @@
 #include "Profiling/StatRegistry.h"
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/UObjectIterator.h"
+#include <cstdlib>   // rand, srand
+#include <ctime>     // time
 
 
 void UWorld::Initialize()
@@ -47,6 +49,14 @@ void UWorld::CreateBaseObject()
                 UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
                 apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
                 FVector newPos = FVector(i, j, k);
+
+                //    // 랜덤 위치 생성 (예: -500 ~ 500 범위)
+                //float randX = FMath::RandRange(-1000.0f, 1000.0f);
+                //float randY = FMath::RandRange(-1000.0f, 1000.0f);
+                //float randZ = FMath::RandRange(0.0f, 500.0f);
+
+                //FVector newPos = FVector(randX, randY, randZ);
+
                 SpawnedActor->SetActorLocation(newPos);
                 apple->UpdateWorldAABB();
             }
@@ -205,4 +215,9 @@ void UWorld::ClearScene()
         Prim->DestroyComponent();
         
     }
+}
+
+float RandomFloat(float min, float max)
+{
+    return min + static_cast<float>(rand()) / RAND_MAX * (max - min);
 }

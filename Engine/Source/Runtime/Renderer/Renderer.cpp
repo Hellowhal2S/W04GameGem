@@ -1122,27 +1122,26 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     FScopeCycleCounter OcclusionTimer("OcclusionTimer");
 
     // Occlusion BeginFrame
-    GOcclusionSystem->BeginFrame();
-    Graphics->DeviceContext->ClearDepthStencilView(Graphics->DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    //GOcclusionSystem->BeginFrame();
+    //Graphics->DeviceContext->ClearDepthStencilView(Graphics->DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-    // cbViewProj 상수 버퍼 업데이트
-    Graphics->DeviceContext->UpdateSubresource(cbViewProj, 0, nullptr, &ViewProj, 0, 0);
-    SetOcclusionRenderState();
+    //// cbViewProj 상수 버퍼 업데이트
+    //Graphics->DeviceContext->UpdateSubresource(cbViewProj, 0, nullptr, &ViewProj, 0, 0);
+    //SetOcclusionRenderState();
 
-    // Occlusion 박스 렌더링
-    RenderOcclusionBox(World->SceneOctree->GetRoot()->Bounds, 1.0f);
+    //// Occlusion 박스 렌더링
+    //RenderOcclusionBox(World->SceneOctree->GetRoot()->Bounds, 1.0f);
 
-    // Occlusion 쿼리 등록
-    World->SceneOctree->GetRoot()->QueryOcclusion(*this, Graphics->DeviceContext, Frustum);
-    //GOcclusionSystem->FlushDeferredDraws(*this, Graphics->DeviceContext);
+    //// Occlusion 쿼리 등록
+    //World->SceneOctree->GetRoot()->QueryOcclusion(*this, Graphics->DeviceContext, Frustum);
 
-    Graphics->RestoreDefaultRenderState();
+    //Graphics->RestoreDefaultRenderState();
 
-    // Occlusion EndFrame
-    GOcclusionSystem->EndFrame(Graphics->DeviceContext);
+    //// Occlusion EndFrame
+    //GOcclusionSystem->EndFrame(Graphics->DeviceContext);
 
-    Graphics->DeviceContext->ClearDepthStencilView(Graphics->DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-    PrepareShader();
+    //Graphics->DeviceContext->ClearDepthStencilView(Graphics->DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    //PrepareShader();
 
     FStatRegistry::RegisterResult(OcclusionTimer);
 
@@ -1464,7 +1463,7 @@ void FRenderer::CreateOcclusion()
 
     D3D11_DEPTH_STENCIL_DESC dsDesc = {};
     dsDesc.DepthEnable = true;
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; // Depth write off
+    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; // Depth write on
     dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
     Graphics->Device->CreateDepthStencilState(&dsDesc, &DepthTestOnlyState);
 
