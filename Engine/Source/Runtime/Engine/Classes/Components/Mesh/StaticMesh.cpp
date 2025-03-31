@@ -9,17 +9,13 @@ UStaticMesh::UStaticMesh()
 
 UStaticMesh::~UStaticMesh()
 {
-    if (staticMeshRenderData == nullptr) return;
-
-    if (staticMeshRenderData->VertexBuffer) {
-        staticMeshRenderData->VertexBuffer->Release();
-        staticMeshRenderData->VertexBuffer = nullptr;
+    for (auto& Pair : LODRenderDataMap)
+    {
+        delete Pair.Value->IndexBuffer;
+        delete Pair.Value->VertexBuffer;
+        delete Pair.Value;
     }
-
-    if (staticMeshRenderData->IndexBuffer) {
-        staticMeshRenderData->IndexBuffer->Release();
-        staticMeshRenderData->IndexBuffer = nullptr;
-    }
+    LODRenderDataMap.Empty();
 }
 
 uint32 UStaticMesh::GetMaterialIndex(FName MaterialSlotName) const
@@ -40,25 +36,34 @@ void UStaticMesh::GetUsedMaterials(TArray<UMaterial*>& Out) const
     }
 }
 
-void UStaticMesh::SetData(OBJ::FStaticMeshRenderData* renderData)
+void UStaticMesh::SetData(ELODLevel LOD, OBJ::FStaticMeshRenderData* renderData)
 {
-    staticMeshRenderData = renderData;
+    if (!renderData) return;
 
-    uint32 verticeNum = staticMeshRenderData->Vertices.Num();
-    if (verticeNum <= 0) return;
-    //staticMeshRenderData->VertexBuffer = GetEngine().renderer.CreateVertexBuffer(staticMeshRenderData->Vertices, verticeNum * sizeof(FVertexSimple));
-    
-    uint32 indexNum = staticMeshRenderData->Indices.Num();
-    //if (indexNum > 0)
-    //    staticMeshRenderData->IndexBuffer = GetEngine().renderer.CreateIndexBuffer(staticMeshRenderData->Indices, indexNum * sizeof(uint32));
+    // LODRenderDataMap에 저장
+    LODRenderDataMap.Add(LOD, renderData);
 
-    for (int materialIndex = 0; materialIndex < staticMeshRenderData->Materials.Num(); materialIndex++) {
-        FStaticMaterial* newMaterialSlot = new FStaticMaterial();
-        UMaterial* newMaterial = FManagerOBJ::CreateMaterial(staticMeshRenderData->Materials[materialIndex]);
+    // LOD0일 때만 머티리얼 생성 (한 번만)
+    if (LOD == ELODLevel::LOD0 && materials.Num() == 0)
+    {
+        for (int materialIndex = 0; materialIndex < renderData->Materials.Num(); materialIndex++)
+        {
+            FStaticMaterial* newMaterialSlot = new FStaticMaterial();
+            UMaterial* newMaterial = FManagerOBJ::CreateMaterial(renderData->Materials[materialIndex]);
 
-        newMaterialSlot->Material = newMaterial;
-        newMaterialSlot->MaterialSlotName = staticMeshRenderData->Materials[materialIndex].MTLName;
+            newMaterialSlot->Material = newMaterial;
+            newMaterialSlot->MaterialSlotName = renderData->Materials[materialIndex].MTLName;
 
-        materials.Add(newMaterialSlot);
+            materials.Add(newMaterialSlot);
+        }
     }
+}
+
+OBJ::FStaticMeshRenderData* UStaticMesh::GetRenderData(ELODLevel LOD)
+{
+    if (OBJ::FStaticMeshRenderData** Found = LODRenderDataMap.Find(LOD))
+    {
+        return *Found;
+    }
+    return nullptr;
 }

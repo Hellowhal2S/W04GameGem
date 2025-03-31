@@ -6,124 +6,93 @@
 
 OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& PathFileName)
 {
-    OBJ::FStaticMeshRenderData* NewStaticMesh = new OBJ::FStaticMeshRenderData();
-        
-    if ( const auto It = ObjStaticMeshMap.Find(PathFileName))
+    if (const auto It = ObjStaticMeshMap.Find(PathFileName))
     {
         return *It;
     }
-        
-    FWString BinaryPath = (PathFileName + ".bin").ToWideString();
-    if (std::ifstream(BinaryPath).good())
-    {/*
-            if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
-            {
-                ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
-                return NewStaticMesh;
-            }*/
-    }
-        
-    // Parse OBJ
-    FObjInfo NewObjInfo;
-    bool Result = FLoaderOBJ::ParseOBJ(PathFileName, NewObjInfo);
-    wchar_t buffer[256];  // 메시지를 저장할 버퍼
 
-    if (!Result)
+    // --------------------------- 공통 준비 --------------------------- //
+    FString ObjPath = PathFileName;
+    //String Dir = ObjPath.GetDirectory();
+
+    // 전체 StaticMesh 객체 생성 (모든 LOD를 보관)
+    UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
+
+    // --------------------------- LOD0 로딩 --------------------------- //
+    FObjInfo LOD0Info;
+    if (!FLoaderOBJ::ParseOBJ(PathFileName, LOD0Info))
     {
-        delete NewStaticMesh;
         return nullptr;
     }
 
-    // Material
-    if (NewObjInfo.MaterialSubsets.Num() > 0)
-    {
-        Result = FLoaderOBJ::ParseMaterial(NewObjInfo, *NewStaticMesh);
-        if (!Result)
-        {
-            delete NewStaticMesh;
-            return nullptr;
-        }
-        CombineMaterialIndex(*NewStaticMesh);
-        for (int materialIndex = 0; materialIndex < NewStaticMesh->Materials.Num(); materialIndex++) {
-            CreateMaterial(NewStaticMesh->Materials[materialIndex]);
-        }
-    }
-        
-    // Convert FStaticMeshRenderData
-    Result = FLoaderOBJ::ConvertToStaticMesh(NewObjInfo, *NewStaticMesh);
-    if (!Result)
-    {
-        delete NewStaticMesh;
-        return nullptr;
-    }
-    ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
+    OBJ::FStaticMeshRenderData* LOD0Mesh = new OBJ::FStaticMeshRenderData();
+    if (!FLoaderOBJ::ParseMaterial(LOD0Info, *LOD0Mesh)) { delete LOD0Mesh; return nullptr; }
+    if (!FLoaderOBJ::ConvertToStaticMesh(LOD0Info, *LOD0Mesh)) { delete LOD0Mesh; return nullptr; }
+    FManagerOBJ::CombineMaterialIndex(*LOD0Mesh);
 
-    OBJ::FStaticMeshRenderData* DowngradeX5 = new OBJ::FStaticMeshRenderData();
-    FObjInfo DowngradeX5Obj = NewObjInfo;
-    QEMSimplifier::Simplify(DowngradeX5Obj, DowngradeX5Obj.Vertices.Num() * 0.5);
-    DowngradeX5Obj.ObjectName = DowngradeX5Obj.ObjectName + L"X5";
-
-    if (DowngradeX5Obj.MaterialSubsets.Num() > 0)
+    // 머티리얼 등록
+    for (const auto& Mat : LOD0Mesh->Materials)
     {
-        Result = FLoaderOBJ::ParseMaterial(DowngradeX5Obj, *DowngradeX5);
-        if (!Result)
-        {
-            delete DowngradeX5;
-            return nullptr;
-        }
-        CombineMaterialIndex(*DowngradeX5);
-        for (int materialIndex = 0; materialIndex < DowngradeX5->Materials.Num(); materialIndex++) {
-            CreateMaterial(DowngradeX5->Materials[materialIndex]);
-        }
+        CreateMaterial(Mat);
     }
-    FLoaderOBJ::ConvertToStaticMesh(DowngradeX5Obj, *DowngradeX5);
-    ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
-    UStaticMesh* staticMeshDowngradeX5 = FObjectFactory::ConstructObject<UStaticMesh>();
-    staticMeshDowngradeX5->SetData(DowngradeX5);
-    staticMeshMap.Add(DowngradeX5->ObjectName, staticMeshDowngradeX5);
 
-    
-    OBJ::FStaticMeshRenderData* DowngradeX1 = new OBJ::FStaticMeshRenderData();
-    FObjInfo DowngradeX1Obj = NewObjInfo;
-    QEMSimplifier::Simplify(DowngradeX1Obj, DowngradeX1Obj.Vertices.Num() * 0.1);
-    DowngradeX1Obj.ObjectName = DowngradeX1Obj.ObjectName + L"X1";
+    StaticMesh->SetData(ELODLevel::LOD0, LOD0Mesh);
+    ObjStaticMeshMap.Add(PathFileName, LOD0Mesh); // 캐싱 목적
+    staticMeshMap.Add(PathFileName.ToWideString(), StaticMesh); // 외부 접근용
 
-    if (DowngradeX1Obj.MaterialSubsets.Num() > 0)
-    {
-        Result = FLoaderOBJ::ParseMaterial(DowngradeX1Obj, *DowngradeX1);
-        if (!Result)
-        {
-            delete DowngradeX1;
-            return nullptr;
-        }
-        CombineMaterialIndex(*DowngradeX1);
-        for (int materialIndex = 0; materialIndex < DowngradeX1->Materials.Num(); materialIndex++) {
-            CreateMaterial(DowngradeX1->Materials[materialIndex]);
-        }
-    }
-    FLoaderOBJ::ConvertToStaticMesh(DowngradeX1Obj, *DowngradeX1);
-    ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
-    UStaticMesh* staticMeshDowngradeX1 = FObjectFactory::ConstructObject<UStaticMesh>();
-    staticMeshDowngradeX1->SetData(DowngradeX1);
-    staticMeshMap.Add(DowngradeX1->ObjectName, staticMeshDowngradeX1);
-    return NewStaticMesh;
+    // --------------------------- LOD1 (50%) --------------------------- //
+    FObjInfo LOD1Info = LOD0Info;
+    QEMSimplifier::Simplify(LOD1Info, LOD1Info.Vertices.Num() * 0.5);
+    LOD1Info.ObjectName += L"X5";
+
+    OBJ::FStaticMeshRenderData* LOD1Mesh = new OBJ::FStaticMeshRenderData();
+    if (!FLoaderOBJ::ParseMaterial(LOD1Info, *LOD1Mesh)) { delete LOD1Mesh; return nullptr; }
+    if (!FLoaderOBJ::ConvertToStaticMesh(LOD1Info, *LOD1Mesh)) { delete LOD1Mesh; return nullptr; }
+    FManagerOBJ::CombineMaterialIndex(*LOD1Mesh);
+
+    StaticMesh->SetData(ELODLevel::LOD1, LOD1Mesh);
+
+    // --------------------------- LOD2 (10%) --------------------------- //
+    FObjInfo LOD2Info = LOD0Info;
+    QEMSimplifier::Simplify(LOD2Info, LOD2Info.Vertices.Num() * 0.1);
+    LOD2Info.ObjectName += L"X1";
+
+    OBJ::FStaticMeshRenderData* LOD2Mesh = new OBJ::FStaticMeshRenderData();
+    if (!FLoaderOBJ::ParseMaterial(LOD2Info, *LOD2Mesh)) { delete LOD2Mesh; return nullptr; }
+    if (!FLoaderOBJ::ConvertToStaticMesh(LOD2Info, *LOD2Mesh)) { delete LOD2Mesh; return nullptr; }
+    FManagerOBJ::CombineMaterialIndex(*LOD2Mesh);
+
+    StaticMesh->SetData(ELODLevel::LOD2, LOD2Mesh);
+
+    // --------------------------- 완료 --------------------------- //
+    return LOD0Mesh;
 }
+
+
+
 
 void FManagerOBJ::CombineMaterialIndex(OBJ::FStaticMeshRenderData& OutFStaticMesh)
 {
     for (int32 i = 0; i < OutFStaticMesh.MaterialSubsets.Num(); i++)
     {
         FString MatName = OutFStaticMesh.MaterialSubsets[i].MaterialName;
-        for (int32 j = 0; j < OutFStaticMesh.Materials.Num(); j++)
+
+        // 순서를 기준으로 강제 매핑
+        if (i < OutFStaticMesh.Materials.Num())
         {
-            if (OutFStaticMesh.Materials[j].MTLName == MatName)
-            {
-                OutFStaticMesh.MaterialSubsets[i].MaterialIndex = j;
-                break;
-            }
+            OutFStaticMesh.MaterialSubsets[i].MaterialIndex = i;
+
+            // 디버깅용 로그
+            // UE_LOG(LogTemp, Log, TEXT("Material [%s] mapped to Index %d"), *MatName, i);
+        }
+        else
+        {
+            // 예외 상황 처리
+            OutFStaticMesh.MaterialSubsets[i].MaterialIndex = 0;
         }
     }
 }
+
 
 bool FManagerOBJ::SaveStaticMeshToBinary(const FWString& FilePath, const OBJ::FStaticMeshRenderData& StaticMesh)
 {
@@ -331,26 +300,28 @@ UMaterial* FManagerOBJ::GetMaterial(FString name)
 {
     return materialMap[name];
 }
-
 UStaticMesh* FManagerOBJ::CreateStaticMesh(FString filePath)
 {
-
-    OBJ::FStaticMeshRenderData* staticMeshRenderData = FManagerOBJ::LoadObjStaticMeshAsset(filePath);
-
-    if (staticMeshRenderData == nullptr) return nullptr;
-
-    UStaticMesh* staticMesh = GetStaticMesh(staticMeshRenderData->ObjectName);
-    if (staticMesh != nullptr) {
-        return staticMesh;
+    // 이미 staticMeshMap에 존재하는지 확인
+    if (UStaticMesh* Found = GetStaticMesh(filePath.ToWideString()))
+    {
+        return Found;
     }
 
-    staticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
-    staticMesh->SetData(staticMeshRenderData);
+    // LoadObjStaticMeshAsset은 LOD0~2 포함된 StaticMesh 내부 생성
+    OBJ::FStaticMeshRenderData* staticMeshRenderData = LoadObjStaticMeshAsset(filePath);
+    if (staticMeshRenderData == nullptr)
+    {
+        return nullptr;
+    }
 
-    staticMeshMap.Add(staticMeshRenderData->ObjectName, staticMesh);
+    // LoadObjStaticMeshAsset 내부에서 staticMeshMap에 UStaticMesh 등록됨
+    return GetStaticMesh(filePath.ToWideString());
 }
 
 UStaticMesh* FManagerOBJ::GetStaticMesh(FWString name)
 {
-    return staticMeshMap[name];
+    if (UStaticMesh** Found = staticMeshMap.Find(name))
+        return *Found;
+    return nullptr;
 }

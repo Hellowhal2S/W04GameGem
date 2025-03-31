@@ -1127,7 +1127,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderNodes);
     // 2. 렌더링
     //RenderCollectedBatches(*this, View * Proj, RenderMap,World->SceneOctree->GetRoot()->CachedBatchData);
-    RenderCollectedBatches(*this,View*Proj,RenderNodes,World->SceneOctree->GetRoot());
+    RenderCollectedBatches(*this,View*Proj,RenderNodes,World->SceneOctree->GetRoot(),ELODLevel::LOD0);
     FStatRegistry::RegisterResult(BatchTimer);
     if (World->HighlightedMeshComp)
     {

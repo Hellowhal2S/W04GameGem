@@ -50,7 +50,7 @@ void UWorld::CreateBaseObject()
             {
                 AActor* SpawnedActor = SpawnActor<AActor>();
                 UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
-                apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
+                apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Data/JungleApples/apple_mid.obj"));
                 FVector newPos = FVector(i, j, k);
                 SpawnedActor->SetActorLocation(newPos);
                 apple->UpdateWorldAABB();
@@ -248,7 +248,8 @@ void UWorld::ReloadScene(const FString& FileName)
     FString NewFile = GEngineLoop.GetSceneManager()->LoadSceneFromFile(FileName);
 
     if (SceneOctree && SceneOctree->GetRoot())
-        SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
+        delete SceneOctree;
+        //SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
 
     ClearScene(); // 기존 오브젝트 제거
     GEngineLoop.GetSceneManager()->ParseSceneData(NewFile);
