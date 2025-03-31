@@ -203,7 +203,7 @@ void FEngineLoop::Tick()
 
         // Input();
         FScopeCycleCounter Timer1("Tick");
-        GWorld->Tick(elapsedTime);
+        //GWorld->Tick(elapsedTime);
         LevelEditor->Tick(elapsedTime);
         FStatRegistry::RegisterResult(Timer1);
         Render();
@@ -212,7 +212,7 @@ void FEngineLoop::Tick()
         UIMgr->BeginFrame();
         UnrealEditor->Render();
 
-        Console::GetInstance().Draw();
+        //Console::GetInstance().Draw();
 
         UIMgr->EndFrame();
         FStatRegistry::RegisterResult(Timer2);

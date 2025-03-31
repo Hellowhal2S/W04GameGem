@@ -25,9 +25,7 @@
 void UWorld::Initialize()
 {
     // TODO: Load Scene
-    FScopeCycleCounter Timer("CreateBaseObject");
     CreateBaseObject();
-    FStatRegistry::RegisterResult(Timer); 
     BuildOctree();
     SceneKDTreeSystem = new FKDTreeSystem();
     SceneKDTreeSystem->Build(SceneOctree->GetRoot()->Bounds);
@@ -247,8 +245,8 @@ void UWorld::ReloadScene(const FString& FileName)
 {
     FString NewFile = GEngineLoop.GetSceneManager()->LoadSceneFromFile(FileName);
 
-    if (SceneOctree && SceneOctree->GetRoot())
-        SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
+    // if (SceneOctree && SceneOctree->GetRoot())
+    //     SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
 
     ClearScene(); // 기존 오브젝트 제거
     GEngineLoop.GetSceneManager()->ParseSceneData(NewFile);

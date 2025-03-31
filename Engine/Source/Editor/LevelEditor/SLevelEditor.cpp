@@ -40,6 +40,7 @@ void SLevelEditor::Initialize()
 
 void SLevelEditor::Tick(double deltaTime)
 {
+    
     if (bMultiViewportMode) {
         POINT pt;
         GetCursorPos(&pt);
