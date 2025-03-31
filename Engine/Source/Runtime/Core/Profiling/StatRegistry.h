@@ -29,6 +29,7 @@ public:
 		double FPS_5Sec = 0.0;
 		double FPS_Min = 0.0;
 		double FPS_Max = 0.0;
+	    double ms = 0.0;
 	};
 	static double GetFPS(const TStatId& StatId);
     static const TMap<uint32, double>& GetStatMap() { return StatMap; }

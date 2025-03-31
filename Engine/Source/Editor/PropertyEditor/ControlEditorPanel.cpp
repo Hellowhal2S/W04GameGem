@@ -11,6 +11,8 @@
 #include "Engine/StaticMeshActor.h"
 #include "ImGUI/imgui_internal.h"
 #include "LevelEditor/SLevelEditor.h"
+#include "Octree/Octree.h"
+#include "Profiling/StatRegistry.h"
 #include "tinyfiledialogs/tinyfiledialogs.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "PropertyEditor/ShowFlags.h"
@@ -110,6 +112,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
             // TODO: Load Scene
             FString NewFile = SceneMgr->LoadSceneFromFile(FileName);
             GEngineLoop.SetCurMap(FileName);
+            GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
             GEngineLoop.GetWorld()->ClearScene();
             SceneMgr->ParseSceneData(NewFile);
             GEngineLoop.GetWorld()->BuildOctree();

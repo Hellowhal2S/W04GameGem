@@ -424,7 +424,9 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\ActorEditor.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Actors\Player.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Octree\OcclusionQuerySystem.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Octree\Octree.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Octree\OctreeOcclusionQuery.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\GameFramework\Actor.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -481,6 +483,7 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Octree\OcclusionQuerySystem.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Octree\Octree.h" />
     <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\NameTypes.h" />
     <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectArray.h" />

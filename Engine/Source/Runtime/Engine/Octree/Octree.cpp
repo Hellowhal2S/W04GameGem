@@ -16,6 +16,8 @@
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/Casts.h"
 #include "UObject/UObjectIterator.h"
+#include "OcclusionQuerySystem.h"
+
 int GCurrentFrame = 0;
 
 void FRenderBatchData::CreateBuffersIfNeeded(FRenderer& Renderer)
@@ -39,25 +41,7 @@ void FRenderBatchData::CreateBuffersIfNeeded(FRenderer& Renderer)
     // Vertices.ShrinkToFit();
     // Indices.ShrinkToFit();
 }
-/*
-void FRenderBatchData::ReleaseBuffersIfUnused(int CurrentFrame, int ThresholdFrames)
-{
-    if ((CurrentFrame - LastUsedFrame) > ThresholdFrames)
-    {
-        if (VertexBuffer)
-        {
-            VertexBuffer->Release();
-            VertexBuffer = nullptr;
-        }
 
-        if (IndexBuffer)
-        {
-            IndexBuffer->Release();
-            IndexBuffer = nullptr;
-        }
-    }
-}
-*/
 FOctreeNode::FOctreeNode(const FBoundingBox& InBounds, int InDepth)
     : Bounds(InBounds)
     , Depth(InDepth)
@@ -68,6 +52,25 @@ FOctreeNode::~FOctreeNode()
 {
     for (int i = 0; i < 8; ++i)
         delete Children[i];
+    for (auto& Pair : CachedBatchData)
+    {
+        FRenderBatchData& Batch = Pair.Value;
+        if (Batch.VertexBuffer)
+        {
+            Batch.VertexBuffer->Release();
+            Batch.VertexBuffer = nullptr;
+        }
+        if (Batch.IndexBuffer)
+        {
+            Batch.IndexBuffer->Release();
+            Batch.IndexBuffer = nullptr;
+        }
+        Batch.Vertices.Empty();
+        Batch.Indices.Empty();
+        Batch.Vertices.ShrinkToFit();
+        Batch.Indices.ShrinkToFit();
+        
+    }
 }
 
 void FOctreeNode::Insert(UPrimitiveComponent* Component, int MaxDepth)
@@ -186,7 +189,6 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
 
 void FOctreeNode::BuildBatchRenderData()
 {
-    FScopeCycleCounter Timer("BuildBatchRenderData");
     VertexBufferSizeInBytes = 0;
     IndexBufferSizeInBytes = 0;
     // Step 1. 자식 먼저 처리
@@ -240,7 +242,6 @@ void FOctreeNode::BuildBatchRenderData()
                 }
         }
     }
-
     // Step 2. 본인 노드의 Components 처리
     for (UPrimitiveComponent* Comp : Components)
          {
@@ -360,6 +361,45 @@ void FOctreeNode::BuildBatchRenderData()
              }
          }
     
+        const FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
+            StaticMeshComp->GetWorldLocation(),
+            StaticMeshComp->GetWorldRotation(),
+            StaticMeshComp->GetWorldScale()
+        );
+
+        for (int i = 0; i < Subsets.Num(); ++i)
+        {
+            const auto& Subset = Subsets[i];
+            const auto& MatInfo = Materials[Subset.MaterialIndex];
+
+            FRenderBatchData& Entry = CachedBatchData.FindOrAdd(MatInfo.MTLName);
+            Entry.MaterialInfo = MatInfo;
+
+            UINT VertexStart = (UINT)Entry.Vertices.Num();
+            TMap<UINT, UINT> IndexMap;
+
+            for (UINT j = 0; j < Subset.IndexCount; ++j)
+            {
+                UINT oldIndex = MeshIndices[Subset.IndexStart + j];
+                if (!IndexMap.Contains(oldIndex))
+                {
+                    //FVertexCompact TransformedVertex = ConvertToCompact(MeshVertices[oldIndex]);
+                    FVertexCompact TransformedVertex = MeshVertices[oldIndex];
+                    // 월드 위치 변환
+                    FVector LocalPosition{TransformedVertex.x, TransformedVertex.y, TransformedVertex.z};
+                    FVector WorldPosition = ModelMatrix.TransformPosition(LocalPosition);
+                    TransformedVertex.x = WorldPosition.x;
+                    TransformedVertex.y = WorldPosition.y;
+                    TransformedVertex.z = WorldPosition.z;
+
+                    Entry.Vertices.Add(TransformedVertex);
+
+                    IndexMap.Add(oldIndex, VertexStart++);
+                }
+                Entry.Indices.Add(IndexMap[oldIndex]);
+            }
+        }
+    }
     // Step 3. 최종 버퍼 크기 계산 (현재 Vertex/Index는 FVertexCompact, uint32 기준)
     for (const auto& Pair : CachedBatchData)
     {
@@ -367,31 +407,31 @@ void FOctreeNode::BuildBatchRenderData()
         VertexBufferSizeInBytes += Batch.Vertices.Num() * sizeof(FVertexCompact);
         IndexBufferSizeInBytes += Batch.Indices.Num() * sizeof(uint32);
     }
-    FStatRegistry::RegisterResult(Timer);
 }
 
 void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
 {
     FScopeCycleCounter Timer("BuildBatchBuffers");
-    for (auto& Pair : CachedBatchData)
+    if (Depth >= GRenderDepthMin && Depth <= GRenderDepthMax)
     {
-        FRenderBatchData& RenderData = Pair.Value;
-
-        if (!RenderData.Vertices.IsEmpty())
+        for (auto& Pair : CachedBatchData)
         {
-            RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
-                RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
-        }
+            FRenderBatchData& RenderData = Pair.Value;
 
-        if (!RenderData.Indices.IsEmpty())
-        {
-            RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
-                RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
-        }
+            if (!RenderData.Vertices.IsEmpty())
+            {
+                RenderData.VertexBuffer = Renderer.CreateVertexBuffer(
+                    RenderData.Vertices, RenderData.Vertices.Num() * sizeof(FVertexCompact));
+            }
 
-        RenderData.IndicesNum = RenderData.Indices.Num();
-        RenderData.Vertices.Empty();
-        RenderData.Indices.Empty();
+            if (!RenderData.Indices.IsEmpty())
+            {
+                RenderData.IndexBuffer = Renderer.CreateIndexBuffer(
+                    RenderData.Indices, RenderData.Indices.Num() * sizeof(UINT));
+            }
+
+            RenderData.IndicesNum = RenderData.Indices.Num();
+        }
     }
 #pragma region LODRenderBatches
     for (auto& Pair : CachedBatchDataX5)
@@ -444,62 +484,98 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
     FStatRegistry::RegisterResult(Timer);
 }
 
-/*
-void FOctreeNode::RenderBatches(
-    FRenderer& Renderer,
-    const FFrustum& Frustum,
-    const FMatrix& VP
-) const
+void FOctreeNode::ClearBatchDatas(FRenderer& Renderer)
 {
-    EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
-
-    if (Containment == EFrustumContainment::Contains)
+    for (auto& Pair : CachedBatchData)
     {
-        UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
-               Depth, CachedBatchData.Num());
-        for (const auto& Pair : CachedBatchData)
-        {
-            const FRenderBatchData& RenderData = Pair.Value;
-            if (!RenderData.VertexBuffer || !RenderData.IndexBuffer)
-                continue;
-            // Material 설정
-            Renderer.UpdateMaterial(RenderData.MaterialInfo);
-
-            // 버퍼 설정
-            UINT offset = 0;
-            //Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &CachedData->VertexBuffer, &Renderer.Stride, &offset);
-            //Renderer.Graphics->DeviceContext->IASetIndexBuffer(CachedData->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-            Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RenderData.VertexBuffer, &Renderer.Stride, &offset);
-            Renderer.Graphics->DeviceContext->IASetIndexBuffer(RenderData.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-            // 상수 버퍼 설정 (Model은 Identity)
-            FMatrix Model = FMatrix::Identity;
-            FMatrix MVP = Model * VP;
-            FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
-            Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
-
-            // 렌더링
-            Renderer.Graphics->DeviceContext->DrawIndexed(RenderData.IndicesNum, 0, 0);
-        }
-
-        return;
+        FRenderBatchData& RenderData = Pair.Value;
+        RenderData.Vertices.Empty();
+        RenderData.Vertices.ShrinkToFit();
+        RenderData.Indices.Empty();
+        RenderData.Indices.ShrinkToFit();
     }
 
-    // 재귀 탐색
     for (int i = 0; i < 8; ++i)
     {
         if (Children[i])
+            Children[i]->ClearBatchDatas(Renderer);
+    }
+}
+
+void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap)
+{
+    EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
+    if (Containment == EFrustumContainment::Contains ||
+        (Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax))
+    {
+        bool temp = GOcclusionSystem->IsRegionVisible(NodeId);
+
+        if (!GOcclusionSystem->IsRegionVisible(NodeId))
         {
-            Children[i]->RenderBatches(Renderer, Frustum, VP);
+            int a = 1;
+            UE_LOG(LogLevel::Error, "%d",temp);
+            return;
+        }
+
+        if (Depth >= GRenderDepthMin)
+        {
+            for (auto& Pair : CachedBatchData)
+            {
+                const FString& MatName = Pair.Key;
+                OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
+            }
+            return;
         }
     }
 
-}*/
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+            Children[i]->CollectRenderNodes(Frustum, OutRenderMap);
+    }
+}
+
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap)
+{
+    FMatrix MVP = FMatrix::Identity * VP;
+    FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
+
+    Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
+    for (const auto& Pair : RenderMap)
+    {
+        const TArray<FRenderBatchData*>& Batches = Pair.Value;
+        if (Batches.IsEmpty()) continue;
+
+        // 머티리얼 설정 (한 번만)
+        FRenderBatchData* First = Batches[0];
+        Renderer.UpdateMaterial(First->MaterialInfo);
+
+        for (FRenderBatchData* Batch : Batches)
+        {
+            Batch->CreateBuffersIfNeeded(Renderer);
+            if (!Batch->VertexBuffer || !Batch->IndexBuffer)
+                continue;
+
+            Batch->LastUsedFrame = GCurrentFrame;
+
+            UINT offset = 0;
+            Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &Batch->VertexBuffer, &Renderer.Stride, &offset);
+            Renderer.Graphics->DeviceContext->IASetIndexBuffer(Batch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+            Renderer.Graphics->DeviceContext->DrawIndexed(Batch->IndicesNum, 0, 0);
+        }
+    }
+}
+
 void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, const FMatrix& VP)
 {
     EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
-    if (Containment == EFrustumContainment::Contains||Containment == EFrustumContainment::Intersects&&Depth==GRenderDepthMax)
+    if (Containment == EFrustumContainment::Contains || Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax)
     {
+        if (!GOcclusionSystem->IsRegionVisible(NodeId))
+        {
+            return;
+        }
+
         if (Depth >= GRenderDepthMin)
         {
             // UE_LOG(LogLevel::Display, "[OctreeRender] Rendered Node at Depth: %d | Batches: %d",
@@ -507,14 +583,6 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
             FVector midPoint = (Bounds.max + Bounds.min) *0.5f;
             FVector cameraLoc = GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->ViewTransformPerspective.GetLocation();
             float distance =  midPoint.Distance(cameraLoc);
-
-            // TMap<FString, FRenderBatchData> Batches;
-            // if (distance < 5.f)
-            //     Batches = CachedBatchData;
-            // else if (distance < 50.0f)
-            //     Batches = CachedBatchDataX5;
-            // else
-            //     Batches = CachedBatchDataX1;
 
             if ( distance < 20.f)
             {
@@ -588,16 +656,16 @@ void FOctreeNode::RenderBatches(FRenderer& Renderer, const FFrustum& Frustum, co
                 {
                     FRenderBatchData& RenderData = Pair.Value;
 
-                    // 🟡 Lazy 생성: 필요한 경우에만 생성
-                    FScopeCycleCounter Timer("CreateBuffers");
-                    RenderData.CreateBuffersIfNeeded(Renderer);
-                    FStatRegistry::RegisterResult(Timer);
+                // Lazy 생성: 필요한 경우에만 생성
+                FScopeCycleCounter Timer("CreateBuffers");
+                RenderData.CreateBuffersIfNeeded(Renderer);
+                FStatRegistry::RegisterResult(Timer);
 
                     if (!RenderData.VertexBuffer || !RenderData.IndexBuffer)
                         continue;
 
-                    // ✅ 사용 시점 기록
-                    RenderData.LastUsedFrame = GCurrentFrame;
+                // 사용 시점 기록
+                RenderData.LastUsedFrame = GCurrentFrame;
 
                     // 머티리얼 설정
                     Renderer.UpdateMaterial(RenderData.MaterialInfo);
@@ -653,5 +721,36 @@ void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
         {
             Children[i]->TickBuffers(CurrentFrame, FrameThreshold);
         }
+    }
+}
+
+void FOctreeNode::QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum)
+{
+    EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
+    if (Containment == EFrustumContainment::Contains || Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax)
+    {
+        if (NodeId == 0)
+            NodeId = MakeNodeId(Bounds);
+
+        //if (GOcclusionSystem->QueriesThisFrame >= MaxQueriesPerFrame)
+        //    return;
+
+        // Z-Depth 기반 Occlusion Query 등록
+        GOcclusionSystem->QueryRegion(NodeId, Bounds, Context, [&](const FBoundingBox& Box) {
+            Renderer.RenderOcclusionBox(Box, 1.1f);
+            });
+
+        //GOcclusionSystem->QueriesThisFrame++;
+
+        if (!GOcclusionSystem->IsRegionVisible(NodeId))
+            return;
+
+    }
+
+    // 재귀 처리
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+            Children[i]->QueryOcclusion(Renderer, Context, Frustum);
     }
 }

@@ -38,6 +38,7 @@ public:
     FOctreeNode* Children[8] = {nullptr};
     bool bIsLeaf = true;
     int Depth = 0;
+    int NodeId = 0;
 
     TMap<FString, FRenderBatchData> CachedBatchData;
     TMap<FString, FRenderBatchData> CachedBatchDataX5;
@@ -49,18 +50,23 @@ public:
 
     void BuildBatchRenderData();
     void BuildBatchBuffers(FRenderer& Renderer);
+    void ClearBatchDatas(FRenderer& Renderer);
+
+    
     void Insert(UPrimitiveComponent* Component, int MaxDepth = 5);
     void Query(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutResults) const;
     void TickBuffers(int CurrentFrame, int FrameThreshold);
+    void CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArray<FRenderBatchData*>>& OutRenderMap);
+    
+    void QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum);
 
-    void RenderBatches(
-        FRenderer& Renderer,
-        const FFrustum& Frustum,
-        const FMatrix& VP
-    );
+    const int MaxQueriesPerFrame = 2000;
+
+    void RenderBatches(FRenderer& Renderer,const FFrustum& Frustum,const FMatrix& VP);
 };
-inline int GRenderDepthMin = 1;  // 최소 깊이 (이보다 얕으면 스킵)
-inline int GRenderDepthMax = 2;  // 최대 깊이 (이보다 깊으면 스킵)
+
+inline int GRenderDepthMin = 1; // 최소 깊이 (이보다 얕으면 스킵)
+inline int GRenderDepthMax = 2; // 최대 깊이 (이보다 깊으면 스킵)
 class FOctree
 {
 public:
@@ -79,3 +85,16 @@ private:
 void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node, int MaxDepth);
 //FRenderer::RenderStaticMeshe에서 사용
 const int FrameThreshold = 2; // 프레임 이상 사용 안 한 버퍼 제거
+
+
+// 간단한 NodeId 생성기 (Bounds 기반 해시)
+inline int MakeNodeId(const FBoundingBox& Bounds)
+{
+    int x = static_cast<int>(Bounds.min.x * 100); // 1cm 단위 정규화
+    int y = static_cast<int>(Bounds.min.y * 100);
+    int z = static_cast<int>(Bounds.min.z * 100);
+
+    return x * 73856093 ^ y * 19349663 ^ z * 83492791;
+}
+
+void RenderCollectedBatches(FRenderer& Renderer,const FMatrix& VP,const TMap<FString, TArray<FRenderBatchData*>>& RenderMap);
