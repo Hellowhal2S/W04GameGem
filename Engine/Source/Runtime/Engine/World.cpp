@@ -25,9 +25,7 @@
 void UWorld::Initialize()
 {
     // TODO: Load Scene
-    FScopeCycleCounter Timer("CreateBaseObject");
     CreateBaseObject();
-    FStatRegistry::RegisterResult(Timer); 
     BuildOctree();
     SceneKDTreeSystem = new FKDTreeSystem();
     SceneKDTreeSystem->Build(SceneOctree->GetRoot()->Bounds);

@@ -101,6 +101,7 @@ public:
 
 
     std::string DumpLODRangeRecursive(int MaxDepth, int IndentLevel = 0) const;
+    void ClearBatchDatas();
 
 
     //TMap<FString, FDrawRange> DrawRanges; // 루트 기준 범위 정보 저장
@@ -134,4 +135,4 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
 //FRenderer::RenderStaticMesh에서 사용(현재 사용 X)
 const int FrameThreshold = 2; // 프레임 이상 사용 안 한 버퍼 제거
 //CollectRenderNodes를 통해 선별한 노드의 데이터를 렌더.
-void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode, ELODLevel LODLevel);
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode);

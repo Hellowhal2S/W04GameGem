@@ -52,7 +52,7 @@ void FOctree::BuildFull()
     Root->AssignAllDrawRangesLODWrapped();
     Root->BuildBatchBuffers(FEngineLoop::renderer);
     //Root->BuildBatchBuffers(FEngineLoop::renderer);
-    //Root->ClearBatchDatas();
+    Root->ClearBatchDatas();
     Root->ClearKDDatas(MaxDepthKD);
 
     FStatRegistry::RegisterResult(Timer);
@@ -362,133 +362,6 @@ void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* N
     }
 }
 
-/*
-void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
-{
-    if (!RootNode)
-        RootNode = this;
-
-    VertexBufferSizeInBytes = 0;
-    IndexBufferSizeInBytes = 0;
-
-    if (bIsLeaf)
-    {
-        for (UPrimitiveComponent* Comp : Components)
-        {
-            UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(Comp);
-            if (!StaticMeshComp || !StaticMeshComp->GetStaticMesh()) continue;
-
-            // LOD 순회
-            for (ELODLevel LODLevel : {ELODLevel::LOD0, ELODLevel::LOD1, ELODLevel::LOD2})
-            {
-                OBJ::FStaticMeshRenderData* RenderData= nullptr;
-                RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData(LODLevel);
-                if (!RenderData) continue;
-
-                const TArray<FVertexCompact>& MeshVertices = RenderData->Vertices;
-                const TArray<unsigned>& MeshIndices = RenderData->Indices;
-                const TArray<FObjMaterialInfo>& Materials = RenderData->Materials;
-                const TArray<FMaterialSubset>& Subsets = RenderData->MaterialSubsets;
-
-                const FMatrix ModelMatrix = JungleMath::CreateModelMatrix(
-                    StaticMeshComp->GetWorldLocation(),
-                    StaticMeshComp->GetWorldRotation(),
-                    StaticMeshComp->GetWorldScale()
-                );
-                for (int i = 0; i < Subsets.Num(); ++i)
-                {
-                    const FMaterialSubset& Subset = Subsets[i];
-                    const FObjMaterialInfo& MatInfo = Materials[Subset.MaterialIndex];
-                    const FString& MatName = MatInfo.MTLName;
-
-                    // 이미 Key는 LOD 포함된 형태라고 가정 (예: AppleMat_LOD0)
-                    const FString& Key = MatName; // MakeBatchKey 제거
-
-                    // 루트에 버퍼 추가
-                    FRenderBatchRootData& RootBatch = RootNode->CachedBatchRootData.FindOrAdd(Key);
-                    TArray<FVertexCompact>& LODVerts = RootBatch.Vertices.FindOrAdd(LODLevel);
-                    TArray<UINT>& LODIndices = RootBatch.Indices.FindOrAdd(LODLevel);
-                    UINT VertexStart = (UINT)LODVerts.Num();
-
-                    TMap<UINT, UINT> IndexMap;
-
-                    for (UINT j = 0; j < Subset.IndexCount; ++j)
-                    {
-                        UINT oldIndex = MeshIndices[Subset.IndexStart + j];
-                        if (!IndexMap.Contains(oldIndex))
-                        {
-                            FVertexCompact V = MeshVertices[oldIndex];
-                            FVector WorldPos = ModelMatrix.TransformPosition(FVector(V.x, V.y, V.z));
-                            V.x = WorldPos.x; V.y = WorldPos.y; V.z = WorldPos.z;
-
-                            LODVerts.Add(V);
-                            IndexMap.Add(oldIndex, VertexStart++);
-                        }
-                        LODIndices.Add(IndexMap[oldIndex]);
-                    }
-
-                    // 노드 정보 저장
-                    FRenderBatchNodeData& NodeData = CachedBatchNodeData.FindOrAdd(Key);
-                    NodeData.MaterialInfo = MatInfo;
-                    NodeData.OwnerNode = this;
-                    NodeData.IndicesNum += Subset.IndexCount;
-
-                    FDrawRange DrawRange;
-                    DrawRange.IndexStart = LODIndices.Num() - Subset.IndexCount;
-                    DrawRange.IndexCount = Subset.IndexCount;
-
-                    NodeData.LODDrawRanges.FindOrAdd(LODLevel) = DrawRange;
-                }
-            }
-        }
-    }
-
-    // 자식 재귀 호출
-    for (int i = 0; i < 8; ++i)
-    {
-        if (Children[i])
-            Children[i]->BuildBatchRenderData(RootNode);
-    }
-
-    // 자식 노드 병합
-    for (int i = 0; i < 8; ++i)
-    {
-        if (!Children[i]) continue;
-
-        for (const auto& ChildPair : Children[i]->CachedBatchNodeData)
-        {
-            const FString& Key = ChildPair.Key;
-            const FRenderBatchNodeData& ChildBatch = ChildPair.Value;
-
-            if (ChildBatch.IndicesNum == 0) continue;
-
-            FRenderBatchNodeData& MyBatch = CachedBatchNodeData.FindOrAdd(Key);
-            MyBatch.MaterialInfo = ChildBatch.MaterialInfo;
-            MyBatch.IndicesNum += ChildBatch.IndicesNum;
-            MyBatch.OwnerNode = this;
-
-            // LOD별 DrawRange 병합
-            for (const auto& LODPair : ChildBatch.LODDrawRanges)
-            {
-                ELODLevel LOD = LODPair.Key;
-                const FDrawRange& ChildRange = LODPair.Value;
-
-                FDrawRange& MyRange = MyBatch.LODDrawRanges.FindOrAdd(LOD);
-                if (MyRange.IndexCount == 0)
-                {
-                    MyRange = ChildRange;
-                }
-                else
-                {
-                    // 여러 자식 노드일 경우 DrawRange 이어붙이지 않고 일단 전체 범위 추적
-                    // → 이후 렌더링에서 StartIndex, IndexCount로 Draw 호출
-                    MyRange.IndexCount += ChildRange.IndexCount;
-                }
-            }
-        }
-    }
-}
-*/
 void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
 {
     if (!RootNode)
@@ -509,7 +382,7 @@ void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
             {
                 ELODLevel LODLevel = static_cast<ELODLevel>(LOD);
                 OBJ::FStaticMeshRenderData* RenderData = nullptr;
-                
+
                 RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData(LODLevel);
                 if (!RenderData) continue;
 
@@ -545,7 +418,9 @@ void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
                         {
                             FVertexCompact V = MeshVertices[oldIndex];
                             FVector WorldPos = ModelMatrix.TransformPosition(FVector(V.x, V.y, V.z));
-                            V.x = WorldPos.x; V.y = WorldPos.y; V.z = WorldPos.z;
+                            V.x = WorldPos.x;
+                            V.y = WorldPos.y;
+                            V.z = WorldPos.z;
 
                             Vertices.Add(V);
                             IndexMap.Add(oldIndex, VertexStart++);
@@ -596,12 +471,8 @@ void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
 }
 
 
-
-
 void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
 {
-    FScopeCycleCounter Timer("BuildBatchBuffers");
-
     // 루트 노드만 버퍼를 생성
     if (Depth == 0)
     {
@@ -636,8 +507,6 @@ void FOctreeNode::BuildBatchBuffers(FRenderer& Renderer)
             }
         }
     }
-
-    FStatRegistry::RegisterResult(Timer);
 }
 
 
@@ -671,18 +540,111 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TArray<FOctreeNode
             return;
         }
     }
-
+    if (Containment == EFrustumContainment::Outside || Depth == GRenderDepthMax)return;
     for (int i = 0; i < 8; ++i)
     {
         if (Children[i])
             Children[i]->CollectRenderNodes(Frustum, OutNodes);
     }
 }
-void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode, ELODLevel LODLevel)
+
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode)
+{
+    if (!RootNode) return;
+
+    FMatrix MVP = FMatrix::Identity * VP;
+    FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
+    Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
+
+    const TMap<FString, FRenderBatchRootData>& RootBatches = RootNode->CachedBatchRootData;
+
+    FVector CameraPos = GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->ViewTransformPerspective.GetLocation();
+
+    // 1. Material → LOD → Node 리스트로 정리
+    TMap<FString, TMap<ELODLevel, TArray<const FOctreeNode*>>> MaterialLODMap;
+
+    for (const FOctreeNode* Node : RenderNodes)
+    {
+        FVector NodePos = Node->Bounds.GetCenter();
+        float Distance = CameraPos.Distance(NodePos);
+
+        ELODLevel LODLevel = (Distance < GEngineLoop.firstLOD)
+                                 ? ELODLevel::LOD0
+                                 : (Distance < GEngineLoop.firstLOD + GEngineLoop.SecondLOD)
+                                 ? ELODLevel::LOD1
+                                 : ELODLevel::LOD2;
+
+        for (const auto& Pair : Node->CachedBatchNodeData)
+        {
+            const FString& MatKey = Pair.Key;
+            const FRenderBatchNodeData& NodeBatch = Pair.Value;
+
+            const FDrawRange* Range = NodeBatch.LODDrawRanges.Find(LODLevel);
+            if (!Range || Range->IndexCount == 0)
+                continue;
+
+            MaterialLODMap.FindOrAdd(MatKey).FindOrAdd(LODLevel).Add(Node);
+        }
+    }
+
+    // 2. Material + LOD 단위로 버퍼 설정 1회 → DrawIndexed 반복
+    for (const auto& MatPair : MaterialLODMap)
+    {
+        const FString& MatKey = MatPair.Key;
+        const auto& LODMap = MatPair.Value;
+
+        const FRenderBatchRootData* RootBatch = RootBatches.Find(MatKey);
+        if (!RootBatch)
+            continue;
+
+        // 머티리얼 설정 (첫 노드 기준)
+        const FRenderBatchNodeData* FirstBatch = nullptr;
+        for (const auto& LODPair : LODMap)
+        {
+            if (!LODPair.Value.IsEmpty())
+            {
+                FirstBatch = LODPair.Value[0]->CachedBatchNodeData.Find(MatKey);
+                break;
+            }
+        }
+        if (FirstBatch)
+            Renderer.UpdateMaterial(FirstBatch->MaterialInfo);
+
+        for (const auto& LODPair : LODMap)
+        {
+            ELODLevel LOD = LODPair.Key;
+            const TArray<const FOctreeNode*>& Nodes = LODPair.Value;
+
+            ID3D11Buffer* VB = RootBatch->VertexBuffers.Contains(LOD) ? RootBatch->VertexBuffers[LOD] : nullptr;
+            ID3D11Buffer* IB = RootBatch->IndexBuffers.Contains(LOD) ? RootBatch->IndexBuffers[LOD] : nullptr;
+            if (!VB || !IB) continue;
+
+            // ✅ 루프 안에서 LOD별 단 1회 버퍼 바인딩
+            UINT offset = 0;
+            Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VB, &Renderer.Stride, &offset);
+            Renderer.Graphics->DeviceContext->IASetIndexBuffer(IB, DXGI_FORMAT_R32_UINT, 0);
+
+            for (const FOctreeNode* Node : Nodes)
+            {
+                const FRenderBatchNodeData* NodeBatch = Node->CachedBatchNodeData.Find(MatKey);
+                if (!NodeBatch) continue;
+
+                const FDrawRange* Range = NodeBatch->LODDrawRanges.Find(LOD);
+                if (!Range || Range->IndexCount == 0)
+                    continue;
+
+                Renderer.Graphics->DeviceContext->DrawIndexed(Range->IndexCount, Range->IndexStart, 0);
+            }
+        }
+    }
+}
+
+/*
+void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode)
 {
     //std::string str = RootNode->DumpLODRangeRecursive(3);
     if (!RootNode) return;
-
+    ELODLevel LODLevel;
     FMatrix MVP = FMatrix::Identity * VP;
     FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
     Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
@@ -698,7 +660,7 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray
         float distance = cameraPos.Distance(curPos);
         if (distance < GEngineLoop.firstLOD)
             LODLevel = ELODLevel::LOD0;
-        else if ( distance < GEngineLoop.firstLOD + GEngineLoop.SecondLOD)
+        else if (distance < GEngineLoop.firstLOD + GEngineLoop.SecondLOD)
             LODLevel = ELODLevel::LOD1;
         else
         {
@@ -737,22 +699,22 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray
                 LODLevel = ELODLevel::LOD1;
             else
                 LODLevel = ELODLevel::LOD2;
-        ID3D11Buffer* VB = RootBatch->VertexBuffers[LODLevel];
-        ID3D11Buffer* IB = RootBatch->IndexBuffers[LODLevel];
-        if (!VB || !IB) continue;
+            ID3D11Buffer* VB = RootBatch->VertexBuffers[LODLevel];
+            ID3D11Buffer* IB = RootBatch->IndexBuffers[LODLevel];
+            if (!VB || !IB) continue;
 
-        // 머티리얼 설정
-        const FRenderBatchNodeData* BatchData = Nodes[0]->CachedBatchNodeData.Find(Key);
-        if (BatchData)
-            Renderer.UpdateMaterial(BatchData->MaterialInfo);
+            // 머티리얼 설정
+            const FRenderBatchNodeData* BatchData = Nodes[0]->CachedBatchNodeData.Find(Key);
+            if (BatchData)
+                Renderer.UpdateMaterial(BatchData->MaterialInfo);
 
-        // 루트 버퍼 바인딩
-        UINT offset = 0;
-        Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VB, &Renderer.Stride, &offset);
-        Renderer.Graphics->DeviceContext->IASetIndexBuffer(IB, DXGI_FORMAT_R32_UINT, 0);
+            // 루트 버퍼 바인딩
+            UINT offset = 0;
+            Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &VB, &Renderer.Stride, &offset);
+            Renderer.Graphics->DeviceContext->IASetIndexBuffer(IB, DXGI_FORMAT_R32_UINT, 0);
 
-        // Draw
-        
+            // Draw
+
             const FRenderBatchNodeData* NodeBatch = Node->CachedBatchNodeData.Find(Key);
             if (!NodeBatch) continue;
 
@@ -764,7 +726,7 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray
         }
     }
 }
-
+*/
 
 /*
 void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
@@ -797,65 +759,7 @@ void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
     }
 }
 */
-// FOctreeNode.cpp
 
-
-/*
-void FOctreeNode::ComputeDrawRangesFromParentLOD(const FString& MatName, const TMap<ELODLevel, FDrawRange>& InRanges)
-{
-    // 1. 본인 설정
-    FRenderBatchNodeData* MyBatch = CachedBatchNodeData.Find(MatName);
-    if (!MyBatch) return;
-
-    for (const auto& Pair : InRanges)
-    {
-        ELODLevel LOD = Pair.Key;
-        const FDrawRange& ParentRange = Pair.Value;
-
-        uint32 Count = MyBatch->LODDrawRanges[LOD].IndexCount;
-
-        FDrawRange MyRange;
-        MyRange.IndexStart = ParentRange.IndexStart;
-        MyRange.IndexCount = Count;
-
-        MyBatch->LODDrawRanges[LOD] = MyRange; // 저장
-    }
-
-    // 2. 자식에게 분배
-    TMap<ELODLevel, uint32> RunningStart;
-    for (const auto& Pair : InRanges)
-    {
-        RunningStart.Add(Pair.Key, Pair.Value.IndexStart);
-    }
-
-    for (int i = 0; i < 8; ++i)
-    {
-        if (!Children[i]) continue;
-
-        FRenderBatchNodeData* ChildBatch = Children[i]->CachedBatchNodeData.Find(MatName);
-        if (!ChildBatch) continue;
-
-        TMap<ELODLevel, FDrawRange> ChildRangeMap;
-
-        for (const auto& LODPair : ChildBatch->LODDrawRanges)
-        {
-            ELODLevel LOD = LODPair.Key;
-            uint32 Count = LODPair.Value.IndexCount;
-            if (Count == 0) continue;
-
-            uint32 Start = RunningStart.FindOrAdd(LOD);
-            ChildRangeMap.Add(LOD, FDrawRange{ Start, Count });
-
-            RunningStart[LOD] += Count;
-        }
-
-        Children[i]->ComputeDrawRangesFromParentLOD(MatName, ChildRangeMap);
-    }
-}
-
-
-
-*/
 std::string FOctreeNode::DumpLODRangeRecursive(int MaxDepth, int IndentLevel) const
 {
     std::ostringstream oss;
@@ -959,7 +863,7 @@ void FOctreeNode::AssignAllDrawRangesLODWrapped()
                 if (Count == 0) continue;
 
                 uint32 Start = RunningStart.FindOrAdd(LOD);
-                LODRangeMap.Add(LOD, FDrawRange{ Start, Count });
+                LODRangeMap.Add(LOD, FDrawRange{Start, Count});
 
                 RunningStart[LOD] += Count;
             }
@@ -968,6 +872,7 @@ void FOctreeNode::AssignAllDrawRangesLODWrapped()
         }
     }
 }
+
 void FOctreeNode::ComputeDrawRangesFromParentLODWrapped(
     const FString& MatName,
     const TMap<ELODLevel, FDrawRange>& InRanges)
@@ -1016,11 +921,33 @@ void FOctreeNode::ComputeDrawRangesFromParentLODWrapped(
             if (Count == 0) continue;
 
             uint32 Start = RunningStart.FindOrAdd(LOD);
-            ChildRanges.Add(LOD, FDrawRange{ Start, Count });
+            ChildRanges.Add(LOD, FDrawRange{Start, Count});
 
             RunningStart[LOD] += Count;
         }
 
         Children[i]->ComputeDrawRangesFromParentLODWrapped(MatName, ChildRanges);
+    }
+}
+
+void FOctreeNode::ClearBatchDatas()
+{
+    for (auto& Pair : CachedBatchRootData)
+    {
+        FRenderBatchRootData& RenderData = Pair.Value;
+
+        for (auto& VertPair : RenderData.Vertices)
+        {
+            VertPair.Value.Empty();
+            VertPair.Value.ShrinkToFit();
+        }
+        RenderData.Vertices.Empty();
+
+        for (auto& IndexPair : RenderData.Indices)
+        {
+            IndexPair.Value.Empty();
+            IndexPair.Value.ShrinkToFit();
+        }
+        RenderData.Indices.Empty();
     }
 }

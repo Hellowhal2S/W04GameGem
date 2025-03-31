@@ -40,12 +40,12 @@ void ProfilingEditorPanel::Render()
         ImGui::SliderFloat("Second LOD", &secondLOD, 1.0f, 100.0f, "%.1f");
         //ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
         //ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
-        ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
-        ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        ImGui::SliderInt("Depth Min", &GRenderDepthMin, 0, 5);
+        ImGui::SliderInt("Depth Max", &GRenderDepthMax, 0, 5);
         
         //ImGui::SliderInt("KDTreeDepth", &GEngineLoop.GetWorld()->SceneOctree->MaxDepthKD, 0, 5);
         //if (ImGui::Checkbox("UseKD",&GEngineLoop.GetWorld()->SceneOctree->bUseKD));
-        if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
+        //if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
         if (ImGui::Checkbox("Debug OctreeAABB",&FEngineLoop::renderer.bDebugOctreeAABB));
 
         // 드롭다운으로 StatMap 표시
