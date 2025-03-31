@@ -33,13 +33,18 @@ public:
     uint64 IndexBufferSizeInBytes = 0;
     FBoundingBox Bounds;
     TArray<UPrimitiveComponent*> Components;
+ 
+
     FOctreeNode* Children[8] = {nullptr};
     bool bIsLeaf = true;
     int Depth = 0;
     int NodeId = 0;
 
     TMap<FString, FRenderBatchData> CachedBatchData;
+    TMap<FString, FRenderBatchData> CachedBatchDataX5;
+    TMap<FString, FRenderBatchData> CachedBatchDataX1;
 
+    
     FOctreeNode(const FBoundingBox& InBounds, int InDepth);
     ~FOctreeNode();
 

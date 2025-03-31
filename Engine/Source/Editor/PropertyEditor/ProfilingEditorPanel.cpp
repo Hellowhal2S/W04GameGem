@@ -6,6 +6,7 @@
 #include "ImGUI/imgui.h"
 #include "Profiling/PlatformTime.h"
 #include "Profiling/StatRegistry.h"
+#include "UnrealEd/SceneMgr.h"
 #include "UObject/NameTypes.h"
 
 void ProfilingEditorPanel::Render()
@@ -44,6 +45,38 @@ void ProfilingEditorPanel::Render()
         if (ImGui::Button("Clear Buffer"))
         {
             GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Low Quality"))
+        {
+            GEngineLoop.SetQuality(EObjQuality::OQ_Low);
+            std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
+            FString NewFile = SceneMgr->LoadSceneFromFile(GEngineLoop.GetCurMapName());
+            GEngineLoop.GetWorld()->ClearScene();
+            SceneMgr->ParseSceneData(NewFile);
+            GEngineLoop.GetWorld()->BuildOctree();
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("Normal Quality"))
+        {
+            GEngineLoop.SetQuality(EObjQuality::OQ_Normal);
+            std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
+            FString NewFile = SceneMgr->LoadSceneFromFile(GEngineLoop.GetCurMapName());
+            GEngineLoop.GetWorld()->ClearScene();
+            SceneMgr->ParseSceneData(NewFile);
+            GEngineLoop.GetWorld()->BuildOctree();
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("High Quality"))
+        {
+            GEngineLoop.SetQuality(EObjQuality::OQ_High);
+            std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
+            FString NewFile = SceneMgr->LoadSceneFromFile(GEngineLoop.GetCurMapName());
+            GEngineLoop.GetWorld()->ClearScene();
+            SceneMgr->ParseSceneData(NewFile);
+            GEngineLoop.GetWorld()->BuildOctree();
         }
         // 드롭다운으로 StatMap 표시
         if (ImGui::CollapsingHeader("Stat Timings (ms)", ImGuiTreeNodeFlags_DefaultOpen))

@@ -27,6 +27,12 @@ void UWorld::Initialize()
     FScopeCycleCounter Timer("CreateBaseObject");
     CreateBaseObject();
     FStatRegistry::RegisterResult(Timer); 
+    //SpawnObject(OBJ_CUBE);
+
+    // FManagerOBJ::CreateStaticMesh("Assets/SkySphere.obj");
+    // AActor* Car = SpawnActor<AActor>();
+    // UStaticMeshComponent* CarComp = Car->AddComponent<UStaticMeshComponent>();
+    // CarComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Dodge.obj"));
     BuildOctree();
 }
 
@@ -36,32 +42,24 @@ void UWorld::CreateBaseObject()
     {
         EditorPlayer = FObjectFactory::ConstructObject<AEditorPlayer>();;
     }
-    FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
+    // FManagerOBJ::CreateStaticMesh("Data/JungleApples/apple_mid.obj");
 
 
-    for (int i = 0; i < 20; i++)
-    {
-        for (int j = 0; j < 20; j++)
-        {
-            for (int k = 0; k < 10; k++)
-            {
-                AActor* SpawnedActor = SpawnActor<AActor>();
-                UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
-                apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.obj"));
-                FVector newPos = FVector(i, j, k);
-
-                //    // 랜덤 위치 생성 (예: -500 ~ 500 범위)
-                //float randX = FMath::RandRange(-1000.0f, 1000.0f);
-                //float randY = FMath::RandRange(-1000.0f, 1000.0f);
-                //float randZ = FMath::RandRange(0.0f, 500.0f);
-
-                //FVector newPos = FVector(randX, randY, randZ);
-
-                SpawnedActor->SetActorLocation(newPos);
-                apple->UpdateWorldAABB();
-            }
-        }
-    }
+    // for (int i = 0; i < 10; i++)
+    // {
+    //     for (int j = 0; j < 10; j++)
+    //     {
+    //         for (int k = 0; k < 10; k++)
+    //         {
+    //             AActor* SpawnedActor = SpawnActor<AActor>();
+    //             UStaticMeshComponent* apple = SpawnedActor->AddComponent<UStaticMeshComponent>();
+    //             apple->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"apple_mid.objX1"));
+    //             FVector newPos = FVector(i, j, k);
+    //             SpawnedActor->SetActorLocation(newPos);
+    //             apple->UpdateWorldAABB();
+    //         }
+    //     }
+    // }
     // if (LocalGizmo == nullptr)
     // {
     //     LocalGizmo = FObjectFactory::ConstructObject<UTransformGizmo>();

@@ -31,6 +31,9 @@ struct FVector2D
 		y += rhs.y;
 		return *this;
 	}
+    static FVector2D Lerp(const FVector2D& a, const FVector2D& b, float t) {
+	    return a + (b - a) * t;
+	}
 };
 
 // 3D 벡터
