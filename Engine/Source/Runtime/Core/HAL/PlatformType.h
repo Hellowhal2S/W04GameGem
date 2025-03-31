@@ -30,6 +30,9 @@
     #define TEXT(x) x
 #endif
 
+// ON/OFF SIMD
+#define USE_SIMD 1
+
 
 // unsigned int type
 typedef std::uint8_t uint8;
