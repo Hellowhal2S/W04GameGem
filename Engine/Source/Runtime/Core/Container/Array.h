@@ -117,6 +117,29 @@ public:
     }
     void Append(const TArray& OtherArray);
     void ShrinkToFit();
+    /** 마지막 요소를 반환합니다. 비어 있으면 assert 발생 */
+    T& Last();
+    const T& Last() const;
+
+    /** 마지막 요소를 제거하고 반환합니다. */
+    bool Pop(T& OutItem);
+    T Pop();
+
+    /** 요소를 마지막에 추가합니다. */
+    void Push(const T& Item);
+    void Push(T&& Item);
+
+    /** 마지막 요소를 참조로 반환합니다. */
+    T& Top();
+    const T& Top() const;
+
+    /** 첫 요소를 제거하고 반환합니다. */
+    T Dequeue();
+
+    /** 첫 요소로 추가합니다 (Queue용) */
+    void Enqueue(const T& Item);
+    void Enqueue(T&& Item);
+
 };
 
 
