@@ -62,7 +62,7 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     FObjInfo DowngradeX5Obj = NewObjInfo;
     QEMSimplifier::Simplify(DowngradeX5Obj, DowngradeX5Obj.Vertices.Num() * 0.5);
     DowngradeX5Obj.ObjectName = DowngradeX5Obj.ObjectName + L"X5";
-
+    DowngradeX5Obj.MaterialSubsets[0].IndexCount = DowngradeX5Obj.VertexIndices.Num();
     if (DowngradeX5Obj.MaterialSubsets.Num() > 0)
     {
         Result = FLoaderOBJ::ParseMaterial(DowngradeX5Obj, *DowngradeX5);
@@ -87,7 +87,7 @@ OBJ::FStaticMeshRenderData* FManagerOBJ::LoadObjStaticMeshAsset(const FString& P
     FObjInfo DowngradeX1Obj = NewObjInfo;
     QEMSimplifier::Simplify(DowngradeX1Obj, DowngradeX1Obj.Vertices.Num() * 0.1);
     DowngradeX1Obj.ObjectName = DowngradeX1Obj.ObjectName + L"X1";
-
+    DowngradeX1Obj.MaterialSubsets[0].IndexCount = DowngradeX1Obj.VertexIndices.Num();
     if (DowngradeX1Obj.MaterialSubsets.Num() > 0)
     {
         Result = FLoaderOBJ::ParseMaterial(DowngradeX1Obj, *DowngradeX1);

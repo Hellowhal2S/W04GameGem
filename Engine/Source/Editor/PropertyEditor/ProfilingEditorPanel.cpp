@@ -32,12 +32,20 @@ void ProfilingEditorPanel::Render()
         ImGui::Text("Picking Time %.4fms\nNum Attempts: %d\nAccumulated Time %.2fms",FStatRegistry::GetLastMilliseconds("Picking"),FStatRegistry::TotalPickCount,FStatRegistry::TotalPickTime);
         ImGui::Text("FPS (1s): %.2f", Stats.FPS_1Sec);
         ImGui::Text("FPS (5s): %.2f", Stats.FPS_5Sec);
+
+        float& firstLOD = GEngineLoop.firstLOD;
+        float& secondLOD = GEngineLoop.SecondLOD;
+        
+        ImGui::SliderFloat("First LOD", &firstLOD, 1.0f, 100.0f, "%.1f");
+        ImGui::SliderFloat("Second LOD", &secondLOD, 1.0f, 100.0f, "%.1f");
         //ImGui::SliderInt("VertexBuffer Depth Min", &GRenderDepthMin, 0, 5);
         //ImGui::SliderInt("VertexBuffer Depth Max", &GRenderDepthMax, 0, 5);
+        ImGui::SliderInt("Depth Min", &GRenderDepthMin, 0, 5);
+        ImGui::SliderInt("Depth Max", &GRenderDepthMax, 0, 5);
         
         //ImGui::SliderInt("KDTreeDepth", &GEngineLoop.GetWorld()->SceneOctree->MaxDepthKD, 0, 5);
         //if (ImGui::Checkbox("UseKD",&GEngineLoop.GetWorld()->SceneOctree->bUseKD));
-        if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
+        //if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
         if (ImGui::Checkbox("Debug OctreeAABB",&FEngineLoop::renderer.bDebugOctreeAABB));
         if (ImGui::Checkbox("Occlusion Culling", &FEngineLoop::renderer.bOcclusionCulling));
         if (ImGui::Button("Clear Cache"))
@@ -48,6 +56,7 @@ void ProfilingEditorPanel::Render()
         {
             GEngineLoop.GetWorld()->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, 0);
         }
+
         // 드롭다운으로 StatMap 표시
         if (ImGui::CollapsingHeader("Stat Timings (ms)", ImGuiTreeNodeFlags_DefaultOpen))
         {

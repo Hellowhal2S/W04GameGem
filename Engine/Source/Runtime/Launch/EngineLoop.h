@@ -38,16 +38,18 @@ public:
 
 
     HWND hWnd;
-
+    
+    float firstLOD = 20.0f;
+    float SecondLOD = 20.0f;
 private:
     UImGuiManager* UIMgr;
     UWorld* GWorld;
     SLevelEditor* LevelEditor;
     UnrealEd* UnrealEditor;
     FSceneMgr* SceneMgr;
-    
+
     bool bIsExit = false;
-    const int32 targetFPS = 1000;
+    const int32 targetFPS = 720;
     bool bTestInput = false;
 
 public:

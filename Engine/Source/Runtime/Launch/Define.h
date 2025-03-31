@@ -538,3 +538,14 @@ struct FTextureConstants
     float pad0;
     float pad1;
 };
+#ifndef check
+#define check(expr)                                                                          \
+do                                                                                       \
+{                                                                                        \
+if (!(expr))                                                                         \
+{                                                                                    \
+std::cerr << "Check failed: " << #expr << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+assert(expr);                                                                    \
+}                                                                                    \
+} while (0)
+#endif

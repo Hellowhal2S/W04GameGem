@@ -1154,14 +1154,15 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     }
     FStatRegistry::RegisterResult(OcclusionTimer);
 
-    FScopeCycleCounter BatchTimer("BatchTimer");
-    //World->SceneOctree->GetRoot()->RenderBatches(*this,Frustum,View * Proj);
+    FScopeCycleCounter CollectRender("Collect");
 
-    TMap<FString, TArray<FRenderBatchData*>> RenderMap;
-    World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderMap);
+    TArray<FOctreeNode*> RenderNodes;
+    World->SceneOctree->GetRoot()->CollectRenderNodes(Frustum, RenderNodes);
+    FStatRegistry::RegisterResult(CollectRender);
     // 2. 렌더링
-    RenderCollectedBatches(*this, View * Proj, RenderMap);
-
+    FScopeCycleCounter RenderCollected("RenderCollected");
+    RenderCollectedBatches(*this,View*Proj,RenderNodes,World->SceneOctree->GetRoot());
+    FStatRegistry::RegisterResult(RenderCollected);
     if (World->HighlightedMeshComp)
     {
         World->RenderHighlightedComponent(*this, View * Proj);
@@ -1173,7 +1174,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
         {
             UPrimitiveBatch::GetInstance().RenderAABB(MeshComp->WorldAABB, FVector::ZeroVector, FMatrix::Identity);
         }
-    FStatRegistry::RegisterResult(BatchTimer);
+
 }
 
 void FRenderer::RenderVisibleComponents(UWorld* World, TArray<UPrimitiveComponent*>& VisibleComponents, FMatrix VP)

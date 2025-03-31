@@ -177,6 +177,7 @@
     <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\NameTypes.cpp" />
     <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectArray.cpp" />
     <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectHash.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Core\Container\Array.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Core\Container\String.cpp" />
     <ClCompile Include="Engine\Source\Editor\PropertyEditor\ControlEditorPanel.cpp" />
     <ClCompile Include="Engine\Source\Editor\PropertyEditor\OutlinerEditorPanel.cpp" />
