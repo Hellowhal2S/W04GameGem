@@ -1128,6 +1128,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
     // 2. 렌더링
     //RenderCollectedBatches(*this, View * Proj, RenderMap,World->SceneOctree->GetRoot()->CachedBatchData);
     RenderCollectedBatches(*this,View*Proj,RenderMap,World->SceneOctree->GetRoot());
+    FStatRegistry::RegisterResult(BatchTimer);
     if (World->HighlightedMeshComp)
     {
         World->RenderHighlightedComponent(*this, View * Proj);
@@ -1139,7 +1140,7 @@ void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewpor
         {
             UPrimitiveBatch::GetInstance().RenderAABB(MeshComp->WorldAABB, FVector::ZeroVector, FMatrix::Identity);
         }
-    FStatRegistry::RegisterResult(BatchTimer);
+
 }
 
 void FRenderer::RenderVisibleComponents(UWorld* World, TArray<UPrimitiveComponent*>& VisibleComponents, FMatrix VP)

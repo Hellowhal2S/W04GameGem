@@ -50,8 +50,8 @@ void FOctree::BuildFull()
     Root->AssignAllDrawRanges();
     Root->BuildBatchBuffers(FEngineLoop::renderer);
     //Root->BuildBatchBuffers(FEngineLoop::renderer);
-    //Root->ClearBatchDatas();
-    //Root->ClearKDDatas(MaxDepthKD);
+    Root->ClearBatchDatas();
+    Root->ClearKDDatas(MaxDepthKD);
 
     FStatRegistry::RegisterResult(Timer);
 }
@@ -591,7 +591,7 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
 void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<FString, TArray<FRenderBatchData*>>& RenderMap,
                             const FOctreeNode* RootNode)
 {
-    std::string DebugText = RootNode->DumpDrawRangesRecursive(3);
+    //std::string DebugText = RootNode->DumpDrawRangesRecursive(3);
     
     if (!RootNode) return;
 
