@@ -378,7 +378,8 @@ void FOctreeNode::BuildBatchRenderData(FOctreeNode* RootNode)
             // LOD 순회
             for (ELODLevel LODLevel : {ELODLevel::LOD0, ELODLevel::LOD1, ELODLevel::LOD2})
             {
-                OBJ::FStaticMeshRenderData* RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData(LODLevel);
+                OBJ::FStaticMeshRenderData* RenderData= nullptr;
+                RenderData = StaticMeshComp->GetStaticMesh()->GetRenderData(LODLevel);
                 if (!RenderData) continue;
 
                 const TArray<FVertexCompact>& MeshVertices = RenderData->Vertices;
