@@ -22,6 +22,7 @@ struct FRenderBatchData
     TArray<FVertexCompact> Vertices;
     TArray<UINT> Indices;
     FObjMaterialInfo MaterialInfo;
+    uint32 LODLevel = 0;
     uint32 IndicesNum = 0;
     int32 LastUsedFrame = -1;
     FOctreeNode* OwnerNode = nullptr;
@@ -84,6 +85,9 @@ public:
     std::string DumpDrawRangesRecursive(int MaxDepth, int IndentLevel = 0) const;
 
     TMap<FString, FDrawRange> DrawRanges; // 루트 기준 범위 정보 저장
+    TMap<FString, FDrawRange> DrawRangesX5; // 루트 기준 범위 정보 저장
+    TMap<FString, FDrawRange> DrawRangesX1; // 루트 기준 범위 정보 저장
+
 };
 
 //현재 (GRenderDepthMax-GRenderDepthMin+1)*2GB만큼의 VRam 사용

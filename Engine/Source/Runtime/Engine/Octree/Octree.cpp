@@ -671,6 +671,7 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
                 for (auto& Pair : CachedBatchData)
                 {
                     const FString& MatName = Pair.Key;
+                    Pair.Value.LODLevel =0;
                     const FDrawRange* Range = DrawRanges.Find(MatName);
                     if (Range && Range->IndexCount > 0)
                         OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
@@ -681,7 +682,8 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
                 for (auto& Pair : CachedBatchDataX5)
                 {
                     const FString& MatName = Pair.Key;
-                    const FDrawRange* Range = DrawRanges.Find(MatName);
+                    Pair.Value.LODLevel =1;
+                    const FDrawRange* Range = DrawRangesX5.Find(MatName);
                     if (Range && Range->IndexCount > 0)
                         OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
                 }
@@ -691,7 +693,8 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TMap<FString, TArr
                 for (auto& Pair : CachedBatchDataX1)
                 {
                     const FString& MatName = Pair.Key;
-                    const FDrawRange* Range = DrawRanges.Find(MatName);
+                    Pair.Value.LODLevel =2;
+                    const FDrawRange* Range = DrawRangesX1.Find(MatName);
                     if (Range && Range->IndexCount > 0)
                         OutRenderMap.FindOrAdd(MatName).Add(&Pair.Value);
                 }
@@ -714,7 +717,10 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
     if (!RootNode) return;
 
     const TMap<FString, FRenderBatchData>& RootBatches = RootNode->CachedBatchData;
+    const TMap<FString, FRenderBatchData>& RootBatchesX5 = RootNode->CachedBatchDataX5;
+    const TMap<FString, FRenderBatchData>& RootBatchesX1 = RootNode->CachedBatchDataX1;
 
+    
     FMatrix MVP = FMatrix::Identity * VP;
     FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(FMatrix::Identity));
     Renderer.UpdateConstant(MVP, NormalMatrix, FVector4(0, 0, 0, 0), false);
@@ -723,31 +729,68 @@ void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TMap<F
     {
         const FString& MaterialName = Pair.Key;
         const TArray<FRenderBatchData*>& Batches = Pair.Value;
+        // Pair.Value.
 
-        const FRenderBatchData* RootBatch = RootBatches.Find(MaterialName);
-        if (!RootBatch || !RootBatch->VertexBuffer || !RootBatch->IndexBuffer || RootBatch->IndicesNum == 0)
-            continue;
-
-        // 머티리얼 한 번 설정
-        Renderer.UpdateMaterial(RootBatch->MaterialInfo);
 
         // 루트의 버퍼 바인딩 (한 번만)
-        UINT offset = 0;
-        Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RootBatch->VertexBuffer, &Renderer.Stride, &offset);
-        Renderer.Graphics->DeviceContext->IASetIndexBuffer(RootBatch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
         // 각 Batch → OwnerNode → DrawRange 기반으로 Draw
         for (FRenderBatchData* Batch : Batches)
         {
-            if (!Batch || !Batch->OwnerNode)
+            const FRenderBatchData* RootBatch = RootBatches.Find(MaterialName);
+            if (!RootBatch || !RootBatch->VertexBuffer || !RootBatch->IndexBuffer || RootBatch->IndicesNum == 0)
                 continue;
 
-            const FDrawRange* Range = Batch->OwnerNode->DrawRanges.Find(MaterialName);
-            if (!Range || Range->IndexCount == 0)
-                continue;
+            // 머티리얼 한 번 설정
+            Renderer.UpdateMaterial(RootBatch->MaterialInfo);
+            if (Batch->LODLevel == 0 )
+            {
+                UINT offset = 0;
+                RootBatch = RootBatches.Find(MaterialName);
+                Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RootBatch->VertexBuffer, &Renderer.Stride, &offset);
+                Renderer.Graphics->DeviceContext->IASetIndexBuffer(RootBatch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+                if (!Batch || !Batch->OwnerNode)
+                    continue;
 
-            Batch->LastUsedFrame = GCurrentFrame;
-            Renderer.Graphics->DeviceContext->DrawIndexed(Range->IndexCount, Range->IndexStart, 0);
+                const FDrawRange* Range = Batch->OwnerNode->DrawRanges.Find(MaterialName);
+                if (!Range || Range->IndexCount == 0)
+                    continue;
+
+                Batch->LastUsedFrame = GCurrentFrame;
+                Renderer.Graphics->DeviceContext->DrawIndexed(Range->IndexCount, Range->IndexStart, 0);
+            }
+            if (Batch->LODLevel == 1 )
+            {
+                RootBatch = RootBatchesX5.Find(MaterialName);
+                UINT offset = 0;
+                Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RootBatch->VertexBuffer, &Renderer.Stride, &offset);
+                Renderer.Graphics->DeviceContext->IASetIndexBuffer(RootBatch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+                if (!Batch || !Batch->OwnerNode)
+                    continue;
+
+                const FDrawRange* Range = Batch->OwnerNode->DrawRangesX5.Find(MaterialName);
+                if (!Range || Range->IndexCount == 0)
+                    continue;
+
+                Batch->LastUsedFrame = GCurrentFrame;
+                Renderer.Graphics->DeviceContext->DrawIndexed(Range->IndexCount, Range->IndexStart, 0);
+            }
+            if (Batch->LODLevel == 2 )
+            {
+                RootBatch = RootBatchesX1.Find(MaterialName);
+                UINT offset = 0;
+                Renderer.Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RootBatch->VertexBuffer, &Renderer.Stride, &offset);
+                Renderer.Graphics->DeviceContext->IASetIndexBuffer(RootBatch->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+                if (!Batch || !Batch->OwnerNode)
+                    continue;
+
+                const FDrawRange* Range = Batch->OwnerNode->DrawRangesX1.Find(MaterialName);
+                if (!Range || Range->IndexCount == 0)
+                    continue;
+
+                Batch->LastUsedFrame = GCurrentFrame;
+                Renderer.Graphics->DeviceContext->DrawIndexed(Range->IndexCount, Range->IndexStart, 0);
+            }
         }
     }
 }
@@ -847,6 +890,85 @@ void FOctreeNode::AssignAllDrawRanges()
             RunningStart += Count;
         }
     }
+#pragma region LOD
+    for (const auto& Pair : CachedBatchDataX5)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& Batch = Pair.Value;
+
+        FDrawRange Range;
+        Range.IndexStart = 0;
+        Range.IndexCount = Batch.Indices.Num();
+
+        DrawRangesX5.Add(MatName, Range);
+    }
+
+    // 각 머티리얼에 대해 자식들에게 분배
+    for (const auto& Pair : CachedBatchDataX5)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& Batch = Pair.Value;
+
+        uint32 RunningStart = 0;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            if (!Children[i]) continue;
+            auto* ChildBatch = Children[i]->CachedBatchDataX5.Find(MatName);
+            if (!ChildBatch) continue;
+
+            uint32 Count = ChildBatch->Indices.Num();
+            if (Count == 0) continue;
+
+            FDrawRange ChildRange { RunningStart, Count };
+
+            TMap<FString, FDrawRange> MatOnly;
+            MatOnly.Add(MatName, ChildRange);
+            Children[i]->ComputeDrawRangesFromParent(MatOnly);
+
+            RunningStart += Count;
+        }
+    }
+    
+    for (const auto& Pair : CachedBatchDataX1)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& Batch = Pair.Value;
+
+        FDrawRange Range;
+        Range.IndexStart = 0;
+        Range.IndexCount = Batch.Indices.Num();
+
+        DrawRangesX1.Add(MatName, Range);
+    }
+
+    // 각 머티리얼에 대해 자식들에게 분배
+    for (const auto& Pair : CachedBatchDataX1)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& Batch = Pair.Value;
+
+        uint32 RunningStart = 0;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            if (!Children[i]) continue;
+            auto* ChildBatch = Children[i]->CachedBatchDataX1.Find(MatName);
+            if (!ChildBatch) continue;
+
+            uint32 Count = ChildBatch->Indices.Num();
+            if (Count == 0) continue;
+
+            FDrawRange ChildRange { RunningStart, Count };
+
+            TMap<FString, FDrawRange> MatOnly;
+            MatOnly.Add(MatName, ChildRange);
+            Children[i]->ComputeDrawRangesFromParent(MatOnly);
+
+            RunningStart += Count;
+        }
+    }
+#pragma endregion LOD
 }
 void FOctreeNode::ComputeDrawRangesFromParent(const TMap<FString, FDrawRange>& InRanges)
 {
@@ -894,6 +1016,96 @@ void FOctreeNode::ComputeDrawRangesFromParent(const TMap<FString, FDrawRange>& I
             Children[i]->ComputeDrawRangesFromParent(ChildRanges);
         }
     }
+#pragma region LOD
+    // 1. 본인 DrawRange 설정
+    for (auto& Pair : CachedBatchDataX5)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& MyBatch = Pair.Value;
+
+        const FDrawRange* RangeFromParent = InRanges.Find(MatName);
+        if (!RangeFromParent) continue;
+
+        FDrawRange& MyRange = DrawRangesX5.FindOrAdd(MatName);
+        MyRange.IndexStart = RangeFromParent->IndexStart;
+        MyRange.IndexCount = MyBatch.Indices.Num();
+    }
+
+    // 2. 자식에게 머티리얼별로 정확히 나눠서 전달
+    for (const auto& ParentPair : InRanges)
+    {
+        const FString& MatName = ParentPair.Key;
+        const FDrawRange& ParentRange = ParentPair.Value;
+
+        uint32 RunningStart = ParentRange.IndexStart;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            if (!Children[i]) continue;
+
+            FRenderBatchData* ChildBatch = Children[i]->CachedBatchDataX5.Find(MatName);
+            if (!ChildBatch) continue;
+
+            uint32 Count = ChildBatch->Indices.Num();
+            if (Count == 0) continue;
+
+            FDrawRange ChildRange;
+            ChildRange.IndexStart = RunningStart;
+            ChildRange.IndexCount = Count;
+
+            TMap<FString, FDrawRange> ChildRanges;
+            ChildRanges.Add(MatName, ChildRange);
+
+            RunningStart += Count;
+
+            Children[i]->ComputeDrawRangesFromParent(ChildRanges);
+        }
+    }
+    
+    for (auto& Pair : CachedBatchDataX1)
+    {
+        const FString& MatName = Pair.Key;
+        const FRenderBatchData& MyBatch = Pair.Value;
+
+        const FDrawRange* RangeFromParent = InRanges.Find(MatName);
+        if (!RangeFromParent) continue;
+
+        FDrawRange& MyRange = DrawRangesX1.FindOrAdd(MatName);
+        MyRange.IndexStart = RangeFromParent->IndexStart;
+        MyRange.IndexCount = MyBatch.Indices.Num();
+    }
+
+    // 2. 자식에게 머티리얼별로 정확히 나눠서 전달
+    for (const auto& ParentPair : InRanges)
+    {
+        const FString& MatName = ParentPair.Key;
+        const FDrawRange& ParentRange = ParentPair.Value;
+
+        uint32 RunningStart = ParentRange.IndexStart;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            if (!Children[i]) continue;
+
+            FRenderBatchData* ChildBatch = Children[i]->CachedBatchDataX1.Find(MatName);
+            if (!ChildBatch) continue;
+
+            uint32 Count = ChildBatch->Indices.Num();
+            if (Count == 0) continue;
+
+            FDrawRange ChildRange;
+            ChildRange.IndexStart = RunningStart;
+            ChildRange.IndexCount = Count;
+
+            TMap<FString, FDrawRange> ChildRanges;
+            ChildRanges.Add(MatName, ChildRange);
+
+            RunningStart += Count;
+
+            Children[i]->ComputeDrawRangesFromParent(ChildRanges);
+        }
+    }
+#pragma endregion LOD
 }
 
 
