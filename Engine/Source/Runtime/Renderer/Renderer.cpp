@@ -24,6 +24,7 @@
 #include "Math/Frustum.h"
 #include "Profiling/PlatformTime.h"
 #include "Profiling/StatRegistry.h"
+#include "Octree/OcclusionQuerySystem.h"
 
 void FRenderer::Initialize(FGraphicsDevice* graphics)
 {
@@ -35,6 +36,8 @@ void FRenderer::Initialize(FGraphicsDevice* graphics)
     CreateLightingBuffer();
     CreateLitUnlitBuffer();
     UpdateLitUnlitConstant(1);
+    CreateOcclusion();
+    GOcclusionSystem = new OcclusionQuerySystem(Graphics->Device);
 }
 
 void FRenderer::Release()
@@ -1111,14 +1114,45 @@ void FRenderer::Render(UWorld* World, std::shared_ptr<FEditorViewportClient> Act
 
 void FRenderer::RenderStaticMeshes(UWorld* World, std::shared_ptr<FEditorViewportClient> ActiveViewport)
 {
+
     PrepareShader();
     FScopeCycleCounter FrustumTimer("Frustum");
     FFrustum Frustum;
     FMatrix View = ActiveViewport->GetViewMatrix();
     FMatrix Proj = ActiveViewport->GetProjectionMatrix();
+    FMatrix ViewProj = View * Proj;
     Frustum.ConstructFrustum(View * Proj);
     FStatRegistry::RegisterResult(FrustumTimer);
 
+    //World->SceneOctree->GetRoot()->TickBuffers(GCurrentFrame, FrameThreshold);
+    
+    FScopeCycleCounter OcclusionTimer("OcclusionTimer");
+
+    if (bOcclusionCulling)
+    {
+        //Occlusion BeginFrame
+        GOcclusionSystem->BeginFrame();
+        Graphics->DeviceContext->ClearDepthStencilView(Graphics->DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+        // cbViewProj 상수 버퍼 업데이트
+        Graphics->DeviceContext->UpdateSubresource(cbViewProj, 0, nullptr, &ViewProj, 0, 0);
+        SetOcclusionRenderState();
+
+        // Occlusion 박스 렌더링
+        RenderOcclusionBox(World->SceneOctree->GetRoot()->Bounds, 1.0f);
+
+        // Occlusion 쿼리 등록
+        World->SceneOctree->GetRoot()->QueryOcclusion(*this, Graphics->DeviceContext, Frustum);
+
+        Graphics->RestoreDefaultRenderState();
+
+        // Occlusion EndFrame
+        GOcclusionSystem->EndFrame(Graphics->DeviceContext);
+
+        Graphics->DeviceContext->ClearDepthStencilView(Graphics->DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+        PrepareShader();
+    }
+    FStatRegistry::RegisterResult(OcclusionTimer);
 
     FScopeCycleCounter CollectRender("Collect");
 
@@ -1367,3 +1401,144 @@ void FRenderer::RenderLight(UWorld* World, std::shared_ptr<FEditorViewportClient
         UPrimitiveBatch::GetInstance().RenderOBB(Light->GetBoundingBox(), Light->GetWorldLocation(), Model);
     }
 }
+
+void FRenderer::CreateOcclusion() 
+{
+    // 1. 정점 데이터 (단위 AABB)
+    FVector boxVertices[8] = {
+        FVector(-0.5f, -0.5f, -0.5f), 
+        FVector(0.5f, -0.5f, -0.5f), 
+        FVector(-0.5f, 0.5f, -0.5f),  
+        FVector(0.5f, 0.5f, -0.5f),
+        FVector(-0.5f, -0.5f, 0.5f),  
+        FVector(0.5f, -0.5f, 0.5f),
+        FVector(-0.5f, 0.5f, 0.5f),  
+        FVector(0.5f, 0.5f, 0.5f), 
+    };
+
+    //FDebugVertex boxVertices[8] = {
+    //FVector(-0.5f, -0.5f, -0.5f), FVector4(1, 0, 0, 1),
+    //FVector(0.5f, -0.5f, -0.5f), FVector4(1, 0, 0, 1),
+    //FVector(-0.5f, 0.5f, -0.5f),  FVector4(1, 0, 0, 1),
+    //FVector(0.5f, 0.5f, -0.5f), FVector4(1, 0, 0, 1),
+    //FVector(-0.5f, -0.5f, 0.5f),  FVector4(1, 0, 0, 1),
+    //FVector(0.5f, -0.5f, 0.5f),  FVector4(1, 0, 0, 1),
+    //FVector(-0.5f, 0.5f, 0.5f),  FVector4(1, 0, 0, 1),
+    //FVector(0.5f, 0.5f, 0.5f),  FVector4(1, 0, 0, 1),
+    //};
+
+    uint32 boxIndices[36] = {
+        0, 1, 2, 1, 3, 2, // front
+        4, 6, 5, 5, 6, 7, // back
+        0, 4, 1, 1, 4, 5, // bottom
+        2, 3, 6, 3, 7, 6, // top
+        0, 2, 4, 2, 6, 4, // left
+        1, 5, 3, 3, 5, 7  // right
+    };
+
+    // 2. 버퍼 생성
+    D3D11_BUFFER_DESC vbDesc = {};
+    vbDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vbDesc.ByteWidth = sizeof(boxVertices);
+    vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    D3D11_SUBRESOURCE_DATA vbData = { boxVertices };
+    Graphics->Device->CreateBuffer(&vbDesc, &vbData, &OcclusionBoxVB);
+
+    D3D11_BUFFER_DESC ibDesc = {};
+    ibDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    ibDesc.ByteWidth = sizeof(boxIndices);
+    ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    D3D11_SUBRESOURCE_DATA ibData = { boxIndices };
+    Graphics->Device->CreateBuffer(&ibDesc, &ibData, &OcclusionBoxIB);
+
+    // 3. 상수 버퍼 (cbWorld, cbViewProj)
+    D3D11_BUFFER_DESC cbDesc = {};
+    cbDesc.ByteWidth = sizeof(FMatrix);
+    cbDesc.Usage = D3D11_USAGE_DEFAULT;
+    cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    cbDesc.CPUAccessFlags = 0;
+    Graphics->Device->CreateBuffer(&cbDesc, nullptr, &cbWorld);
+    Graphics->Device->CreateBuffer(&cbDesc, nullptr, &cbViewProj);
+
+    // 4. InputLayout & VS (Occlusion용)
+    ID3DBlob* vsBlob = nullptr;
+    //ID3DBlob* psBlob = nullptr;
+    D3DCompileFromFile(L"Shaders/OcclusionShader.hlsl", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &vsBlob, nullptr);
+    Graphics->Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &OcclusionVertexShader);
+
+    //D3DCompileFromFile(L"Shaders/OcclusionShader.hlsl", nullptr, nullptr, "PS", "ps_5_0", 0, 0, &psBlob, nullptr);
+    //Graphics->Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &OcclusionPixelShader);
+
+    D3D11_INPUT_ELEMENT_DESC layout[] = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        //{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+    };
+    Graphics->Device->CreateInputLayout(layout, 1, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &OcclusionInputLayout);
+    //Graphics->Device->CreateInputLayout(layout, 2, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &OcclusionInputLayout);
+    vsBlob->Release();
+    //psBlob->Release();
+
+    // 5. Occlusion 전용 렌더 상태 세트
+    D3D11_BLEND_DESC blendDesc = {};
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = 0; // Color mask off
+    //blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL; // Color mask off
+    Graphics->Device->CreateBlendState(&blendDesc, &NoColorWriteBlendState);
+
+    D3D11_DEPTH_STENCIL_DESC dsDesc = {};
+    dsDesc.DepthEnable = true;
+    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; // Depth write on
+    dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    Graphics->Device->CreateDepthStencilState(&dsDesc, &DepthTestOnlyState);
+
+    D3D11_RASTERIZER_DESC rsDesc = {};
+    rsDesc.CullMode = D3D11_CULL_NONE;
+    rsDesc.FillMode = D3D11_FILL_SOLID;
+    Graphics->Device->CreateRasterizerState(&rsDesc, &OcclusionRasterizerState);
+}
+
+void FRenderer::RenderOcclusionBox(const FBoundingBox& bounds, int boxScale)
+{
+    // 2. 모델 변환 행렬 계산 (Scale + Translation)
+    FVector center = (bounds.min + bounds.max) * 0.5f;
+    FVector scale = (bounds.max - bounds.min) * boxScale;
+    FMatrix world = JungleMath::CreateModelMatrix(center, FVector::ZeroVector, scale);
+
+    // 3. 상수 버퍼에 World, ViewProj 설정
+    Graphics->DeviceContext->UpdateSubresource(cbWorld, 0, nullptr, &world, 0, 0);
+    Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &cbWorld);
+    Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &cbViewProj);
+
+    // 4. InputLayout + Shader 설정
+    Graphics->DeviceContext->IASetInputLayout(OcclusionInputLayout);
+    Graphics->DeviceContext->VSSetShader(OcclusionVertexShader, nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(nullptr, nullptr, 0); // Pixel Shader 없음
+    //Graphics->DeviceContext->PSSetShader(OcclusionPixelShader, nullptr, 0); // Pixel Shader 없음
+
+    // 5. 버텍스 및 인덱스 버퍼 바인딩
+    UINT stride = sizeof(FVector);
+    //UINT stride = sizeof(FDebugVertex);
+    UINT offset = 0;
+    Graphics->DeviceContext->IASetVertexBuffers(0, 1, &OcclusionBoxVB, &stride, &offset);
+    Graphics->DeviceContext->IASetIndexBuffer(OcclusionBoxIB, DXGI_FORMAT_R32_UINT, 0);
+    Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // 6. 드로우 호출 (픽셀은 출력되지 않지만 Z Test는 수행됨)
+    Graphics->DeviceContext->DrawIndexed(36, 0, 0);
+
+}
+
+void FRenderer::SetOcclusionRenderState()
+{
+    Graphics->DeviceContext->OMSetRenderTargets(
+        0, nullptr,              // Color Target 없음 (Occlusion이니까)
+        Graphics->DepthStencilView // Depth만 사용
+    );
+    //Graphics->DeviceContext->OMSetRenderTargets(
+    //    1, Graphics->RTVs,              // Color Target 없음 (Occlusion이니까)
+    //    Graphics->DepthStencilView // Depth만 사용
+    //);
+    Graphics->DeviceContext->OMSetBlendState(NoColorWriteBlendState, nullptr, 0xffffffff);
+    Graphics->DeviceContext->OMSetDepthStencilState(DepthTestOnlyState, 0);
+    Graphics->DeviceContext->RSSetState(OcclusionRasterizerState);
+}
+

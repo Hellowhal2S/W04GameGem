@@ -197,6 +197,7 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\ActorComponent.cpp" />
     <ClCompile Include="Engine\Source\Editor\UnrealEd\EditorViewportClient.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Octree\OcclusionQuerySystem.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\KDTree\KDTree.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\KDTree\KDTreeSystem.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Octree\Octree.cpp">
@@ -293,8 +294,12 @@
       <AdditionalOptions>/utf-8 </AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LinkCompiled>true</LinkCompiled>
+      <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MultiThreadedDebugDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MultiThreadedDebugDLL</RuntimeLibrary>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
     </ClCompile>
+    <ClCompile Include="Engine\Source\Runtime\Engine\Octree\OctreeOcclusionQuery.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Slate\Widgets\Layout\SSplitter.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\ResourceMgr.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\UnrealClient.cpp" />
@@ -348,6 +353,7 @@
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\PlatformTime.h" />
     <ClInclude Include="Engine\Source\Runtime\Core\Profiling\StatRegistry.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\StaticMeshActor.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Octree\OcclusionQuerySystem.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\KDTree\KDTree.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\KDTree\KDTreeSystem.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Octree\Octree.h" />

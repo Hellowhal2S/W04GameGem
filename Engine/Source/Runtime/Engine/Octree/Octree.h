@@ -67,6 +67,7 @@ public:
     FOctreeNode* Children[8] = {nullptr};
     bool bIsLeaf = true;
     int Depth = 0;
+    int NodeId = 0;
 
     TMap<FString, FRenderBatchRootData> CachedBatchRootData;
     TMap<FString, FRenderBatchNodeData> CachedBatchNodeData;
@@ -91,7 +92,9 @@ public:
     //void TickBuffers(int CurrentFrame, int FrameThreshold);
     //현재 렌더할 노드를 결정해서 FRenderBatchData를 반환
     void CollectRenderNodes(const FFrustum& Frustum, TArray<FOctreeNode*>& OutNodes);
+    void QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum);
 
+    const int MaxQueriesPerFrame = 2000;
     UPrimitiveComponent* Raycast(const FRay& Ray, float& OutDistance) const;
     UPrimitiveComponent* RaycastWithKD(const FRay& Ray, float& OutDistance, int MaxDepthKD) const;
     void AssignAllDrawRangesLODWrapped();
@@ -134,5 +137,17 @@ private:
 void DebugRenderOctreeNode(UPrimitiveBatch* PrimitiveBatch, const FOctreeNode* Node, int MaxDepth);
 //FRenderer::RenderStaticMesh에서 사용(현재 사용 X)
 const int FrameThreshold = 2; // 프레임 이상 사용 안 한 버퍼 제거
+
+
+// 간단한 NodeId 생성기 (Bounds 기반 해시)
+inline int MakeNodeId(const FBoundingBox& Bounds)
+{
+    int x = static_cast<int>(Bounds.min.x * 100); // 1cm 단위 정규화
+    int y = static_cast<int>(Bounds.min.y * 100);
+    int z = static_cast<int>(Bounds.min.z * 100);
+
+    return x * 73856093 ^ y * 19349663 ^ z * 83492791;
+}
+
 //CollectRenderNodes를 통해 선별한 노드의 데이터를 렌더.
 void RenderCollectedBatches(FRenderer& Renderer, const FMatrix& VP, const TArray<FOctreeNode*>& RenderNodes, const FOctreeNode* RootNode);

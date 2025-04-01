@@ -47,6 +47,7 @@ void ProfilingEditorPanel::Render()
         //if (ImGui::Checkbox("UseKD",&GEngineLoop.GetWorld()->SceneOctree->bUseKD));
         //if (ImGui::Checkbox("Material Sorting",&FEngineLoop::renderer.bMaterialSort));
         if (ImGui::Checkbox("Debug OctreeAABB",&FEngineLoop::renderer.bDebugOctreeAABB));
+        if (ImGui::Checkbox("Occlusion Culling", &FEngineLoop::renderer.bOcclusionCulling));
 
         // 드롭다운으로 StatMap 표시
         if (ImGui::CollapsingHeader("Stat Timings (ms)", ImGuiTreeNodeFlags_DefaultOpen))

@@ -57,6 +57,7 @@ public:
 
     uint32 GetPixelUUID(POINT pt);
     uint32 DecodeUUIDColor(FVector4 UUIDColor);
+    void RestoreDefaultRenderState();
 private:
     ID3D11RasterizerState* CurrentRasterizer = nullptr;
 };

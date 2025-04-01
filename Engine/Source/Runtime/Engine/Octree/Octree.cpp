@@ -17,6 +17,8 @@
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/Casts.h"
 #include "UObject/UObjectIterator.h"
+#include "OcclusionQuerySystem.h"
+
 int GCurrentFrame = 0;
 
 void FOctree::BuildFull()
@@ -534,6 +536,14 @@ void FOctreeNode::CollectRenderNodes(const FFrustum& Frustum, TArray<FOctreeNode
     if (Containment == EFrustumContainment::Contains ||
         (Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax))
     {
+        //UE_LOG(LogLevel::Display, "CollectRenderNodes! %d", NodeId);
+        if (!GOcclusionSystem->IsRegionVisible(NodeId))
+        {
+            //UE_LOG(LogLevel::Display, "Occlusion Cull %d", NodeId);
+            //UE_LOG(LogLevel::Display, "Depth Level %d", Depth);
+            return;
+        }
+
         if (Depth >= GRenderDepthMin)
         {
             OutNodes.Add(this);
@@ -759,7 +769,39 @@ void FOctreeNode::TickBuffers(int CurrentFrame, int FrameThreshold)
     }
 }
 */
+void FOctreeNode::QueryOcclusion(FRenderer& Renderer, ID3D11DeviceContext* Context, const FFrustum& Frustum)
+{
+    EFrustumContainment Containment = Frustum.CheckContainment(Bounds);
+    if (Containment == EFrustumContainment::Contains || Containment == EFrustumContainment::Intersects && Depth == GRenderDepthMax)
+    {
+        if (Depth > GRenderDepthMax)
+            return;
 
+        if (NodeId == 0)
+            NodeId = MakeNodeId(Bounds);
+
+        //if (GOcclusionSystem->QueriesThisFrame >= MaxQueriesPerFrame)
+        //    return;
+
+        // Z-Depth 기반 Occlusion Query 등록
+        GOcclusionSystem->QueryRegion(NodeId, Bounds, Context, [&](const FBoundingBox& Box) {
+            Renderer.RenderOcclusionBox(Box, 1.1f);
+            });
+
+        //GOcclusionSystem->QueriesThisFrame++;
+
+        if (!GOcclusionSystem->IsRegionVisible(NodeId))
+            return;
+
+    }
+
+    // 재귀 처리
+    for (int i = 0; i < 8; ++i)
+    {
+        if (Children[i])
+            Children[i]->QueryOcclusion(Renderer, Context, Frustum);
+    }
+}
 std::string FOctreeNode::DumpLODRangeRecursive(int MaxDepth, int IndentLevel) const
 {
     std::ostringstream oss;
