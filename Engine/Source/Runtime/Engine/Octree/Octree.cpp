@@ -54,8 +54,8 @@ void FOctree::BuildFull()
     Root->AssignAllDrawRangesLODWrapped();
     Root->BuildBatchBuffers(FEngineLoop::renderer);
     //Root->BuildBatchBuffers(FEngineLoop::renderer);
-    Root->ClearBatchDatas();
-    Root->ClearKDDatas(MaxDepthKD);
+    //Root->ClearBatchDatas();
+    //Root->ClearKDDatas(MaxDepthKD);
 
     FStatRegistry::RegisterResult(Timer);
 }
